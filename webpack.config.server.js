@@ -1,5 +1,6 @@
 const path = require("path");
 const nodeExternals = require("webpack-node-externals");
+const webpack = require("webpack");
 
 const entry = { server: "./src/server/bin/www" };
 
@@ -33,4 +34,7 @@ module.exports = {
       },
     ],
   },
+  plugins: [
+    new webpack.BannerPlugin({ banner: "#!/usr/bin/env node", raw: true }),
+  ],
 };
