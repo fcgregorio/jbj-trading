@@ -3,11 +3,10 @@
  */
 
 import app from '../app';
-// import debug from 'debug';
-var debug = require('debug')('olbes:server')
+import debug from 'debug';
 import http from 'http';
 
-// debug = debug('olbes:server');
+debug('olbes:server');
 
 /**
  * Get port from environment and store in Express.
