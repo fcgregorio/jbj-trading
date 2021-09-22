@@ -7,6 +7,10 @@ const entry = { server: "./src/server/bin/www" };
 module.exports = {
   mode: process.env.NODE_ENV ? process.env.NODE_ENV : "development",
   target: "node",
+  node: {
+    __dirname: false,
+    __filename: false,
+  },
   devtool: "inline-source-map",
   entry: entry,
   output: {
