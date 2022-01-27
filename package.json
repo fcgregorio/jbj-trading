@@ -18,7 +18,7 @@
     "build:client": "react-scripts build",
     "build:dev:client": "dotenv -e .env.development react-scripts build",
     "build:server": "webpack --config webpack.config.server.js",
-    "package": "npx pkg package.json && cp ./node_modules/opn/xdg-open ./dist/xdg-open"
+    "sequelize:setup": "rm dev.sqlite; npx sequelize db:migrate --config=config/sequelize.js; npx sequelize db:seed:all --config=config/sequelize.js;"
   },
   "eslintConfig": {
     "extends": [
