@@ -7,6 +7,7 @@ import {
 } from "react-router-dom";
 import {
     Add as AddIcon,
+    Search as SearchIcon
 } from '@mui/icons-material';
 import {
     Box,
@@ -14,6 +15,7 @@ import {
     Divider,
     FormControlLabel,
     FormGroup,
+    InputAdornment,
     LinearProgress,
     Link,
     Stack,
@@ -44,11 +46,12 @@ import {
 import { AuthContext } from '../Context';
 import { FilterMenu } from '../FilterMenu';
 import { Android12Switch } from '../Switch';
-
+import { useSnackbar } from 'notistack';
 
 export default function Index() {
     const navigate = useNavigate();
     const location = useLocation();
+    const { enqueueSnackbar, closeSnackbar } = useSnackbar();
 
     const [authContext,] = React.useContext(AuthContext);
 
@@ -62,12 +65,7 @@ export default function Index() {
     const [count, setCount] = React.useState<number | null>(null);
     const [items, setItems] = React.useState<Item[]>([]);
 
-    function handleCreateItem() {
-        const newWindow = window.open(resolvePath('create', location.pathname).pathname, '_blank', 'noopener,noreferrer');
-        if (newWindow) newWindow.opener = null;
-    }
-
-    const queryUnits = React.useMemo(
+    const queryItems = React.useMemo(
         () =>
             debounce(
                 async (
@@ -80,6 +78,7 @@ export default function Index() {
                     startCallback: () => void,
                     callback: (results: { count: number; results: Item[]; }) => void,
                     errorCallback: () => void,
+                    finallyCallback: () => void,
                     cancelToken: CancelToken,
                 ) => {
                     startCallback();
@@ -88,14 +87,17 @@ export default function Index() {
                         {
                             params: request,
                             cancelToken: cancelToken,
-                        },
-                    )
+                        })
                         .then(result => result.data)
-                        .then((data) => {
+                        .then(data => {
                             callback(data);
                         })
-                        .catch((error) => {
+                        .catch(error => {
+                            if (axios.isCancel(error)) return;
                             errorCallback();
+                        })
+                        .finally(() => {
+                            finallyCallback();
                         });
                 },
                 200,
@@ -110,7 +112,7 @@ export default function Index() {
         }
 
         const cancelTokenSource = axios.CancelToken.source();
-        queryUnits(
+        queryItems(
             {
                 search: search,
                 filters: {
@@ -132,7 +134,9 @@ export default function Index() {
                 } else {
                     setCursor(null);
                 }
-                setLoading(false);
+            },
+            () => {
+                enqueueSnackbar('Error loading data', { variant: 'error' });
             },
             () => {
                 setLoading(false);
@@ -142,13 +146,15 @@ export default function Index() {
         return () => {
             cancelTokenSource.cancel();
         };
-    }, [queryUnits, search, filterMenuShowDeleted]);
+    }, [queryItems, search, filterMenuShowDeleted]);
 
-    function handleLoadMoreClick() {
+    async function handleLoadMoreClick() {
         setLoading(true);
         const source = axios.CancelToken.source();
         cancelTokenSourceRef.current = source;
-        axios.get<{ count: number; results: Item[]; }>(
+        await axios.get<
+            { count: number; results: Item[]; }
+        >(
             `/api${location.pathname}`,
             {
                 params: {
@@ -159,10 +165,9 @@ export default function Index() {
                     cursor: cursor,
                 },
                 cancelToken: source.token,
-            },
-        )
+            })
             .then(result => result.data)
-            .then((data) => {
+            .then(data => {
                 setCount(data.count);
                 const newItems = [...items, ...data.results];
                 setItems(newItems);
@@ -173,24 +178,27 @@ export default function Index() {
                 } else {
                     setCursor(null);
                 }
-                setLoading(false);
             })
-            .catch((error) => {
+            .catch(error => {
+                if (axios.isCancel(error)) return;
+                enqueueSnackbar('Error loading data', { variant: 'error' });
+            })
+            .finally(() => {
                 setLoading(false);
             });
     }
 
     return (
-        <Stack spacing={2}
+        <Stack
             sx={{
-                marginY: 2
+                boxSizing: 'border-box',
+                flex: '1 1 auto',
             }}
         >
             <Box
                 sx={{
                     display: 'flex',
-                    justifyContent: 'flex-start',
-                    marginX: 2,
+                    padding: 2,
                 }}
             >
                 <Stack direction="row" spacing={2}>
@@ -202,6 +210,11 @@ export default function Index() {
                         onChange={(event) => { setSearch(event.target.value); }}
                         InputProps={{
                             type: 'search',
+                            startAdornment: (
+                                <InputAdornment position="start">
+                                    <SearchIcon />
+                                </InputAdornment>
+                            ),
                         }}
                     />
                     {
@@ -257,7 +270,8 @@ export default function Index() {
                             <Button
                                 startIcon={<AddIcon />}
                                 variant="contained"
-                                onClick={handleCreateItem}
+                                component={RouterLink}
+                                to={`create`}
                             >
                                 Add
                             </Button>
@@ -265,8 +279,17 @@ export default function Index() {
                     }
                 </Stack>
             </Box>
-            <TableContainer>
-                <Table sx={{ minWidth: 650 }} size="small" >
+            <TableContainer
+                sx={{
+                    flex: '1 1 auto',
+                    overflowY: 'scroll',
+                    minHeight: '360px',
+                }}
+            >
+                <Table
+                    size="small"
+                    stickyHeader
+                >
                     <TableHead>
                         <TableRow>
                             <TableCell>ID</TableCell>
@@ -313,7 +336,10 @@ export default function Index() {
                                             to={row.id}
                                             color={'text.primary'}
                                         >
-                                            <Typography fontFamily='monospace'>
+                                            <Typography
+                                                fontFamily='monospace'
+                                                variant='body2'
+                                            >
                                                 {row.id.substring(0, 8)}
                                             </Typography>
                                         </Link>
@@ -321,12 +347,18 @@ export default function Index() {
                                 </TableCell>
                                 <TableCell>{row.name}</TableCell>
                                 <TableCell align="right">
-                                    <Typography fontFamily='monospace'>
+                                    <Typography
+                                        fontFamily='monospace'
+                                        variant='body2'
+                                    >
                                         {row.stock}
                                     </Typography>
                                 </TableCell>
                                 <TableCell align="right">
-                                    <Typography fontFamily='monospace'>
+                                    <Typography
+                                        fontFamily='monospace'
+                                        variant='body2'
+                                    >
                                         {row.safetyStock}
                                     </Typography>
                                 </TableCell>

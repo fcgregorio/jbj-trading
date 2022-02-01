@@ -9,12 +9,15 @@ router.use(loginRequiredMiddleware);
 
 router.get('/', async function (req: Request, res: Response, next: NextFunction) {
     try {
-        let where: WhereOptions<TransferAttributes> = {
-            [Op.or]: [
-                literal('`InTransfer.id` IS NOT NULL'),
-                literal('`OutTransfer.id` IS NOT NULL'),
-            ],
-        };
+        let whereAnd: any[] = [];
+        whereAnd.push(
+            {
+                [Op.or]: [
+                    literal('`InTransfer.id` IS NOT NULL'),
+                    literal('`OutTransfer.id` IS NOT NULL'),
+                ],
+            }
+        );
 
         let countQueryWhere = ``;
         let countQueryInTransferJoin = ``;
@@ -40,18 +43,19 @@ router.get('/', async function (req: Request, res: Response, next: NextFunction)
                     endDate: date.endOf('day').setZone('utc').toFormat('yyyy-LL-dd HH:mm:ss ZZ'),
                 };
 
-                where = {
-                    ...where,
-                    createdAt: {
-                        [Op.gte]: date.startOf('day').toJSDate(),
-                        [Op.lte]: date.endOf('day').toJSDate(),
-                    },
-                };
+                whereAnd.push(
+                    {
+                        createdAt: {
+                            [Op.gte]: date.startOf('day').toJSDate(),
+                            [Op.lte]: date.endOf('day').toJSDate(),
+                        },
+                    }
+                );
             }
         }
 
-        let whereInTransfer: WhereOptions<ItemAttributes> = {};
-        let whereOutTransfer: WhereOptions<ItemAttributes> = {};
+        let whereInTransferAnd: any[] = [];
+        let whereOutTransferAnd: any[] = [];
         const searchQuery = req.query.search as string;
         if (searchQuery !== undefined && searchQuery !== '') {
             countQueryInTransferJoin = countQueryInTransferJoin +
@@ -64,21 +68,23 @@ router.get('/', async function (req: Request, res: Response, next: NextFunction)
                 `;
             countQueryReplacements = {
                 ...countQueryReplacements,
-                searchQuery: '%' + searchQuery + '%',
+                searchQuery: `%${searchQuery}%`,
             };
 
-            whereInTransfer = {
-                ...whereInTransfer,
-                name: {
-                    [Op.like]: '%' + searchQuery + '%', // TODO
-                },
-            };
-            whereOutTransfer = {
-                ...whereOutTransfer,
-                name: {
-                    [Op.like]: '%' + searchQuery + '%', // TODO
-                },
-            };
+            whereInTransferAnd.push(
+                {
+                    name: {
+                        [Op.like]: `%${searchQuery}%`, // TODO
+                    },
+                }
+            );
+            whereOutTransferAnd.push(
+                {
+                    name: {
+                        [Op.like]: `%${searchQuery}%`, // TODO
+                    },
+                }
+            );
         }
 
         const count = await sequelize.query(
@@ -115,28 +121,29 @@ router.get('/', async function (req: Request, res: Response, next: NextFunction)
                 },
             );
 
-            where = {
-                ...where,
-                [Op.or]: [
-                    {
-                        createdAt: {
-                            [Op.lt]: cursor.createdAt,
+            whereAnd.push(
+                {
+                    [Op.or]: [
+                        {
+                            createdAt: {
+                                [Op.lt]: cursor.createdAt,
+                            },
                         },
-                    },
-                    {
-                        [Op.and]: [
-                            {
-                                createdAt: cursor.createdAt,
-                            },
-                            {
-                                id: {
-                                    [Op.lt]: cursor.id,
+                        {
+                            [Op.and]: [
+                                {
+                                    createdAt: cursor.createdAt,
                                 },
-                            },
-                        ]
-                    },
-                ]
-            };
+                                {
+                                    id: {
+                                        [Op.lt]: cursor.id,
+                                    },
+                                },
+                            ]
+                        },
+                    ]
+                }
+            );
         }
 
         const results = await Transfer.findAll({
@@ -159,7 +166,9 @@ router.get('/', async function (req: Request, res: Response, next: NextFunction)
                                     paranoid: false,
                                 },
                             ],
-                            where: whereInTransfer,
+                            where: {
+                                [Op.and]: whereInTransferAnd,
+                            },
                         },
                     ],
                     required: false,
@@ -182,13 +191,17 @@ router.get('/', async function (req: Request, res: Response, next: NextFunction)
                                     paranoid: false,
                                 },
                             ],
-                            where: whereOutTransfer,
+                            where: {
+                                [Op.and]: whereOutTransferAnd,
+                            },
                         },
                     ],
                     required: false,
                 },
             ],
-            where: where,
+            where: {
+                [Op.and]: whereAnd,
+            },
             order: [
                 ['createdAt', 'DESC'],
                 ['id', 'DESC'],

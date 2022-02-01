@@ -106,36 +106,64 @@ User.init(
         username: {
             type: DataTypes.STRING,
             allowNull: false,
-            unique: true,
+            unique: {
+                name: 'username',
+                msg: 'Must be unique'
+            },
             validate: {
-                notEmpty: true,
+                notNull: {
+                    msg: 'Required',
+                },
+                notEmpty: {
+                    msg: 'Must be non-empty'
+                },
             },
         },
         firstName: {
             type: DataTypes.STRING,
             allowNull: false,
             validate: {
-                notEmpty: true,
+                notNull: {
+                    msg: 'Required',
+                },
+                notEmpty: {
+                    msg: 'Must be non-empty'
+                },
             },
         },
         lastName: {
             type: DataTypes.STRING,
             allowNull: false,
             validate: {
-                notEmpty: true,
+                notNull: {
+                    msg: 'Required',
+                },
+                notEmpty: {
+                    msg: 'Must be non-empty'
+                },
             },
         },
         password: {
             type: DataTypes.STRING,
             allowNull: false,
             validate: {
-                notEmpty: true,
+                notNull: {
+                    msg: 'Required',
+                },
+                notEmpty: {
+                    msg: 'Must be non-empty'
+                },
             },
         },
         admin: {
             type: DataTypes.BOOLEAN,
             defaultValue: false,
             allowNull: false,
+            validate: {
+                notNull: {
+                    msg: 'Required',
+                },
+            },
         },
         createdAt: {
             type: DataTypes.DATE,
@@ -283,36 +311,64 @@ UserHistory.init(
         username: {
             type: DataTypes.STRING,
             allowNull: false,
-            unique: true,
+            unique: {
+                name: 'username',
+                msg: 'Must be unique'
+            },
             validate: {
-                notEmpty: true,
+                notNull: {
+                    msg: 'Required',
+                },
+                notEmpty: {
+                    msg: 'Must be non-empty'
+                },
             },
         },
         firstName: {
             type: DataTypes.STRING,
             allowNull: false,
             validate: {
-                notEmpty: true,
+                notNull: {
+                    msg: 'Required',
+                },
+                notEmpty: {
+                    msg: 'Must be non-empty'
+                },
             },
         },
         lastName: {
             type: DataTypes.STRING,
             allowNull: false,
             validate: {
-                notEmpty: true,
+                notNull: {
+                    msg: 'Required',
+                },
+                notEmpty: {
+                    msg: 'Must be non-empty'
+                },
             },
         },
         password: {
             type: DataTypes.STRING,
             allowNull: false,
             validate: {
-                notEmpty: true,
+                notNull: {
+                    msg: 'Required',
+                },
+                notEmpty: {
+                    msg: 'Must be non-empty'
+                },
             },
         },
         admin: {
             type: DataTypes.BOOLEAN,
             defaultValue: false,
             allowNull: false,
+            validate: {
+                notNull: {
+                    msg: 'Required',
+                },
+            },
         },
         createdAt: {
             type: DataTypes.DATE,
@@ -411,9 +467,17 @@ Unit.init(
         name: {
             type: DataTypes.STRING,
             allowNull: false,
-            unique: true,
+            unique: {
+                name: 'name',
+                msg: 'Must be unique'
+            },
             validate: {
-                notEmpty: true,
+                notNull: {
+                    msg: 'Required',
+                },
+                notEmpty: {
+                    msg: 'Must be non-empty'
+                },
             },
         },
         createdAt: {
@@ -539,7 +603,12 @@ UnitHistory.init(
             type: DataTypes.STRING,
             allowNull: false,
             validate: {
-                notEmpty: true,
+                notNull: {
+                    msg: 'Required',
+                },
+                notEmpty: {
+                    msg: 'Must be non-empty'
+                },
             },
         },
         createdAt: {
@@ -600,9 +669,17 @@ Category.init(
         name: {
             type: DataTypes.STRING,
             allowNull: false,
-            unique: true,
+            unique: {
+                name: 'name',
+                msg: 'Must be unique'
+            },
             validate: {
-                notEmpty: true,
+                notNull: {
+                    msg: 'Required',
+                },
+                notEmpty: {
+                    msg: 'Must be non-empty'
+                },
             },
         },
         createdAt: {
@@ -729,7 +806,12 @@ CategoryHistory.init(
             allowNull: false,
             unique: true,
             validate: {
-                notEmpty: true,
+                notNull: {
+                    msg: 'Required',
+                },
+                notEmpty: {
+                    msg: 'Must be non-empty'
+                },
             },
         },
         createdAt: {
@@ -808,44 +890,77 @@ Item.init(
         name: {
             type: DataTypes.STRING,
             allowNull: false,
-            unique: true,
+            unique: {
+                name: 'name',
+                msg: 'Must be unique',
+            },
             validate: {
-                notEmpty: true,
+                notNull: {
+                    msg: 'Required',
+                },
+                notEmpty: {
+                    msg: 'Must be non-empty'
+                },
             },
         },
         safetyStock: {
             type: DataTypes.INTEGER,
             allowNull: false,
             validate: {
-                isGreaterThanZero(value: number) {
-                    if (value < 0) {
-                        throw new Error('Safety stock must be non-negative.');
-                    }
-                }
+                notNull: {
+                    msg: 'Required',
+                },
+                isNumeric: {
+                    msg: 'Must a number',
+                },
+                min: {
+                    msg: 'Must be non-negative',
+                    args: [0],
+                },
             },
         },
         stock: {
             type: DataTypes.INTEGER,
             allowNull: false,
             validate: {
-                isNonNegative(value: number) {
-                    if (value < 0) {
-                        throw new Error('Quantity must be non-negative.');
-                    }
-                }
+                notNull: {
+                    msg: 'Required',
+                },
+                isNumeric: {
+                    msg: 'Must a number',
+                },
+                min: {
+                    msg: 'Must be non-negative',
+                    args: [0],
+                },
             },
         },
         remarks: {
             type: DataTypes.TEXT,
             allowNull: false,
+            validate: {
+                notNull: {
+                    msg: 'Required',
+                },
+            }
         },
         unit: {
             type: DataTypes.UUID,
             allowNull: false,
+            validate: {
+                notNull: {
+                    msg: 'Required',
+                },
+            }
         },
         category: {
             type: DataTypes.UUID,
             allowNull: false,
+            validate: {
+                notNull: {
+                    msg: 'Required',
+                },
+            }
         },
         createdAt: {
             type: DataTypes.DATE,
@@ -1004,42 +1119,72 @@ ItemHistory.init(
             allowNull: false,
             unique: true,
             validate: {
-                notEmpty: true,
+                notNull: {
+                    msg: 'Required',
+                },
+                notEmpty: {
+                    msg: 'Must be non-empty'
+                },
             },
         },
         safetyStock: {
             type: DataTypes.INTEGER,
             allowNull: false,
             validate: {
-                isGreaterThanZero(value: number) {
-                    if (value < 0) {
-                        throw new Error('Safety stock must be non-negative.');
-                    }
-                }
+                notNull: {
+                    msg: 'Required',
+                },
+                isNumeric: {
+                    msg: 'Must a number',
+                },
+                min: {
+                    msg: 'Must be non-negative',
+                    args: [0],
+                },
             },
         },
         stock: {
             type: DataTypes.INTEGER,
             allowNull: false,
             validate: {
-                isNonNegative(value: number) {
-                    if (value < 0) {
-                        throw new Error('Quantity must be non-negative.');
-                    }
-                }
+                notNull: {
+                    msg: 'Required',
+                },
+                isNumeric: {
+                    msg: 'Must a number',
+                },
+                min: {
+                    msg: 'Must be non-negative',
+                    args: [0],
+                },
             },
         },
         remarks: {
             type: DataTypes.TEXT,
             allowNull: false,
+            validate: {
+                notNull: {
+                    msg: 'Required',
+                },
+            }
         },
         unit: {
             type: DataTypes.UUID,
             allowNull: false,
+            validate: {
+                notNull: {
+                    msg: 'Required',
+                },
+            }
         },
         category: {
             type: DataTypes.UUID,
             allowNull: false,
+            validate: {
+                notNull: {
+                    msg: 'Required',
+                },
+            }
         },
         createdAt: {
             type: DataTypes.DATE,
@@ -1105,12 +1250,18 @@ Transaction.init(
         inTransaction: {
             type: DataTypes.UUID,
             allowNull: true,
-            unique: true,
+            unique: {
+                name: 'inTransaction',
+                msg: 'Must be unique'
+            },
         },
         outTransaction: {
             type: DataTypes.UUID,
             allowNull: true,
-            unique: true,
+            unique: {
+                name: 'outTransaction',
+                msg: 'Must be unique'
+            },
         },
         createdAt: {
             type: DataTypes.DATE,
@@ -1177,25 +1328,49 @@ InTransaction.init(
             type: DataTypes.STRING,
             allowNull: false,
             validate: {
-                notEmpty: true,
+                notNull: {
+                    msg: 'Required',
+                },
+                notEmpty: {
+                    msg: 'Must be non-empty'
+                },
             },
         },
         deliveryReceipt: {
             type: DataTypes.STRING,
             validate: {
-                notEmpty: true,
+                notEmpty: {
+                    msg: 'Must be non-empty'
+                },
             },
         },
         dateOfDeliveryReceipt: {
             type: DataTypes.DATEONLY,
+            validate: {
+                isDate: {
+                    msg: 'Must be a valid date',
+                    args: true,
+                },
+            },
         },
         dateReceived: {
-            type: DataTypes.DATEONLY
+            type: DataTypes.DATEONLY,
+            validate: {
+                isDate: {
+                    msg: 'Must be a valid date',
+                    args: true,
+                },
+            },
         },
         void: {
             type: DataTypes.BOOLEAN,
             defaultValue: false,
             allowNull: false,
+            validate: {
+                notNull: {
+                    msg: 'Required',
+                },
+            },
         },
         createdAt: {
             type: DataTypes.DATE,
@@ -1299,24 +1474,48 @@ InTransactionHistory.init(
             type: DataTypes.STRING,
             allowNull: false,
             validate: {
-                notEmpty: true,
+                notNull: {
+                    msg: 'Required',
+                },
+                notEmpty: {
+                    msg: 'Must be non-empty'
+                },
             },
         },
         deliveryReceipt: {
             type: DataTypes.STRING,
             validate: {
-                notEmpty: true,
+                notEmpty: {
+                    msg: 'Must be non-empty'
+                },
             },
         },
         dateOfDeliveryReceipt: {
             type: DataTypes.DATEONLY,
+            validate: {
+                isDate: {
+                    msg: 'Must be a valid date',
+                    args: true,
+                },
+            },
         },
         dateReceived: {
-            type: DataTypes.DATEONLY
+            type: DataTypes.DATEONLY,
+            validate: {
+                isDate: {
+                    msg: 'Must be a valid date',
+                    args: true,
+                },
+            },
         },
         void: {
             type: DataTypes.BOOLEAN,
             allowNull: false,
+            validate: {
+                notNull: {
+                    msg: 'Required',
+                },
+            },
         },
         createdAt: {
             type: DataTypes.DATE,
@@ -1381,22 +1580,40 @@ OutTransaction.init(
             type: DataTypes.STRING,
             allowNull: false,
             validate: {
-                notEmpty: true,
+                notNull: {
+                    msg: 'Required',
+                },
+                notEmpty: {
+                    msg: 'Must be non-empty'
+                },
             },
         },
         deliveryReceipt: {
             type: DataTypes.STRING,
             validate: {
-                notEmpty: true,
+                notEmpty: {
+                    msg: 'Must be non-empty'
+                },
             },
         },
         dateOfDeliveryReceipt: {
             type: DataTypes.DATEONLY,
+            validate: {
+                isDate: {
+                    msg: 'Must be a valid date',
+                    args: true,
+                },
+            },
         },
         void: {
             type: DataTypes.BOOLEAN,
             defaultValue: false,
             allowNull: false,
+            validate: {
+                notNull: {
+                    msg: 'Required',
+                },
+            },
         },
         createdAt: {
             type: DataTypes.DATE,
@@ -1496,21 +1713,39 @@ OutTransactionHistory.init(
             type: DataTypes.STRING,
             allowNull: false,
             validate: {
-                notEmpty: true,
+                notNull: {
+                    msg: 'Required',
+                },
+                notEmpty: {
+                    msg: 'Must be non-empty'
+                },
             },
         },
         deliveryReceipt: {
             type: DataTypes.STRING,
             validate: {
-                notEmpty: true,
+                notEmpty: {
+                    msg: 'Must be non-empty'
+                },
             },
         },
         dateOfDeliveryReceipt: {
             type: DataTypes.DATEONLY,
+            validate: {
+                isDate: {
+                    msg: 'Must be a valid date',
+                    args: true,
+                },
+            },
         },
         void: {
             type: DataTypes.BOOLEAN,
             allowNull: false,
+            validate: {
+                notNull: {
+                    msg: 'Required',
+                },
+            },
         },
         createdAt: {
             type: DataTypes.DATE,
@@ -1571,29 +1806,19 @@ Transfer.init(
         },
         inTransfer: {
             type: DataTypes.UUID,
-            references: {
-                model: {
-                    tableName: 'in_transactions',
-                },
-                key: 'id',
-            },
             allowNull: true,
-            unique: true,
-            onDelete: 'CASCADE',
-            onUpdate: 'CASCADE',
+            unique: {
+                name: 'inTransfer',
+                msg: 'Must be unique'
+            },
         },
         outTransfer: {
             type: DataTypes.UUID,
-            references: {
-                model: {
-                    tableName: 'out_transactions',
-                },
-                key: 'id',
-            },
             allowNull: true,
-            unique: true,
-            onDelete: 'CASCADE',
-            onUpdate: 'CASCADE',
+            unique: {
+                name: 'outTransfer',
+                msg: 'Must be unique'
+            },
         },
         createdAt: {
             type: DataTypes.DATE,
@@ -1658,20 +1883,35 @@ InTransfer.init(
         item: {
             type: DataTypes.UUID,
             allowNull: false,
+            validate: {
+                notNull: {
+                    msg: 'Required',
+                },
+            },
         },
         transaction: {
             type: DataTypes.UUID,
             allowNull: false,
+            validate: {
+                notNull: {
+                    msg: 'Required',
+                },
+            },
         },
         quantity: {
             type: DataTypes.INTEGER,
             allowNull: false,
             validate: {
-                isGreaterThanZero(value: number) {
-                    if (value < 0) {
-                        throw new Error('Safety stock must be non-negative.');
-                    }
-                }
+                notNull: {
+                    msg: 'Required',
+                },
+                isNumeric: {
+                    msg: 'Must a number',
+                },
+                min: {
+                    msg: 'Must be positive',
+                    args: [1],
+                },
             },
         },
         createdAt: {
@@ -1741,20 +1981,35 @@ OutTransfer.init(
         item: {
             type: DataTypes.UUID,
             allowNull: false,
+            validate: {
+                notNull: {
+                    msg: 'Required',
+                },
+            },
         },
         transaction: {
             type: DataTypes.UUID,
             allowNull: false,
+            validate: {
+                notNull: {
+                    msg: 'Required',
+                },
+            },
         },
         quantity: {
             type: DataTypes.INTEGER,
             allowNull: false,
             validate: {
-                isGreaterThanZero(value: number) {
-                    if (value < 0) {
-                        throw new Error('Safety stock must be non-negative.');
-                    }
-                }
+                notNull: {
+                    msg: 'Required',
+                },
+                isNumeric: {
+                    msg: 'Must a number',
+                },
+                min: {
+                    msg: 'Must be positive',
+                    args: [1],
+                },
             },
         },
         createdAt: {

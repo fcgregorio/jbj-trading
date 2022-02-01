@@ -17,11 +17,14 @@ import { DeleteDialogButton } from '../DeleteDialogButton';
 import { DateTimePicker } from '@mui/lab';
 import { RestoreDialogButton } from '../RestoreDialogButton';
 import { Item, ItemHistory } from './Items';
+import { useSnackbar } from 'notistack';
+import { useAsyncEffect } from 'use-async-effect';
 
 function History() {
     const location = useLocation();
     const navigate = useNavigate();
     const params = useParams();
+    const { enqueueSnackbar, closeSnackbar } = useSnackbar();
 
     const [loading, setLoading] = React.useState(false);
     const [cursor, setCursor] = React.useState<number | null>(null);
@@ -29,185 +32,196 @@ function History() {
     const [count, setCount] = React.useState<number | null>(null);
     const [itemHistories, setItemHistories] = React.useState<ItemHistory[]>([]);
 
-    React.useEffect(() => {
+    useAsyncEffect(async isActive => {
         setLoading(true);
-        axios.get<{ count: number; results: ItemHistory[]; }>(`/api${location.pathname}/histories`)
+        await axios.get<
+            { count: number; results: ItemHistory[]; }
+        >(
+            `/api${location.pathname}/histories`)
             .then(result => result.data)
-            .then(
-                (data) => {
-                    setCount(data.count);
-                    setItemHistories(data.results);
-                    if (data.results.length === data.count) {
-                        setCursor(null);
-                    } else if (data.results.length !== 0) {
-                        setCursor(data.results[data.results.length - 1].historyId);
-                    } else {
-                        setCursor(null);
-                    }
-                    setLoading(false);
-                },
-                // Note: it's important to handle errors here
-                // instead of a catch() block so that we don't swallow
-                // exceptions from actual bugs in components.
-                (error) => {
-                    setLoading(false);
+            .then(data => {
+                setCount(data.count);
+                setItemHistories(data.results);
+                if (data.results.length === data.count) {
+                    setCursor(null);
+                } else if (data.results.length !== 0) {
+                    setCursor(data.results[data.results.length - 1].historyId);
+                } else {
+                    setCursor(null);
                 }
-            )
+            })
+            .catch(error => {
+                enqueueSnackbar('Error loading data', { variant: 'error' });
+            })
             .finally(() => {
                 setLoading(false);
             });
     }, [location.pathname]);
 
-    function handleLoadMoreClick() {
+    async function handleLoadMoreClick() {
         setLoading(true);
         const source = axios.CancelToken.source();
         cancelTokenSourceRef.current = source;
-        axios.get<{ count: number; results: ItemHistory[]; }>(
+        await axios.get<
+            { count: number; results: ItemHistory[]; }
+        >(
             `/api${location.pathname}/histories`,
             {
                 params: {
                     cursor: cursor,
                 },
                 cancelToken: source.token,
-            },
-        )
+            })
             .then(result => result.data)
-            .then(
-                (data) => {
-                    setCount(data.count);
-                    const newItemHistories = [...itemHistories, ...data.results];
-                    setItemHistories(newItemHistories);
-                    if (newItemHistories.length === data.count) {
-                        setCursor(null);
-                    } else if (data.results.length !== 0) {
-                        setCursor(data.results[data.results.length - 1].historyId);
-                    } else {
-                        setCursor(null);
-                    }
-                    setLoading(false);
-                },
-                // Note: it's important to handle errors here
-                // instead of a catch() block so that we don't swallow
-                // exceptions from actual bugs in components.
-                (error) => {
-                    setLoading(false);
+            .then(data => {
+                setCount(data.count);
+                const newItemHistories = [...itemHistories, ...data.results];
+                setItemHistories(newItemHistories);
+                if (newItemHistories.length === data.count) {
+                    setCursor(null);
+                } else if (data.results.length !== 0) {
+                    setCursor(data.results[data.results.length - 1].historyId);
+                } else {
+                    setCursor(null);
                 }
-            );
+            })
+            .catch(error => {
+                enqueueSnackbar('Error loading data', { variant: 'error' });
+            })
+            .finally(() => {
+                setLoading(false);
+            });
     }
 
     return (
-        <Stack spacing={2}
+        <TableContainer
             sx={{
-                marginY: 2
-            }}>
-            <TableContainer>
-                <Table sx={{ minWidth: 650 }} size="small" >
-                    <TableHead>
+                flex: '1 1 auto',
+                overflowY: 'scroll',
+                minHeight: '360px',
+            }}
+        >
+            <Table
+                size="small"
+                stickyHeader
+            >
+                <TableHead>
+                    <TableRow>
+                        <TableCell>History ID</TableCell>
+                        <TableCell>History User</TableCell>
+                        <TableCell>Name</TableCell>
+                        <TableCell align="right">Stock</TableCell>
+                        <TableCell align="right">Safety Stock</TableCell>
+                        <TableCell>Unit</TableCell>
+                        <TableCell>Category</TableCell>
+                        <TableCell>Remarks</TableCell>
+                        <TableCell align="right">Created At</TableCell>
+                        <TableCell align="right">Updated At</TableCell>
+                        <TableCell align="right">Deleted At</TableCell>
+                    </TableRow>
+                </TableHead>
+                <TableBody>
+                    {count !== null &&
                         <TableRow>
-                            <TableCell>History ID</TableCell>
-                            <TableCell>History User</TableCell>
-                            <TableCell>Name</TableCell>
-                            <TableCell align="right">Stock</TableCell>
-                            <TableCell align="right">Safety Stock</TableCell>
-                            <TableCell>Unit</TableCell>
-                            <TableCell>Category</TableCell>
-                            <TableCell>Remarks</TableCell>
-                            <TableCell align="right">Created At</TableCell>
-                            <TableCell align="right">Updated At</TableCell>
-                            <TableCell align="right">Deleted At</TableCell>
+                            <TableCell
+                                colSpan={11}
+                                align='right'
+                                sx={{ background: 'rgba(0, 0, 0, 0.06)' }}
+                            >
+                                <Typography
+                                    fontFamily='monospace'
+                                    variant='overline'
+                                >
+                                    {count} {count === 1 ? 'item' : 'items'}
+                                </Typography>
+                            </TableCell>
                         </TableRow>
-                    </TableHead>
-                    <TableBody>
-                        {count !== null &&
-                            <TableRow>
-                                <TableCell
-                                    colSpan={11}
-                                    align='right'
-                                    sx={{ background: 'rgba(0, 0, 0, 0.06)' }}
+                    }
+                    {itemHistories.map((row: any) => (
+                        <TableRow
+                            key={row.id}
+                            sx={{
+                                '&:last-child td, &:last-child th': { border: 0 },
+                            }}
+                        >
+                            <TableCell>
+                                <Typography
+                                    fontFamily='monospace'
+                                    variant='body2'
                                 >
-                                    <Typography
-                                        fontFamily='monospace'
-                                        variant='overline'
+                                    {row.historyId}
+                                </Typography>
+                            </TableCell>
+                            <TableCell>
+                                <Tooltip title={row.historyUser} placement="right">
+                                    <Link
+                                        underline="none"
+                                        component={RouterLink}
+                                        to={`/users/${row.historyUser}`}
+                                        color={'text.primary'}
                                     >
-                                        {count} {count === 1 ? 'item' : 'items'}
-                                    </Typography>
-                                </TableCell>
-                            </TableRow>
-                        }
-                        {itemHistories.map((row: any) => (
-                            <TableRow
-                                key={row.id}
-                                sx={{
-                                    '&:last-child td, &:last-child th': { border: 0 },
-                                }}
-                            >
-                                <TableCell>
-                                    <Typography fontFamily='monospace'>
-                                        {row.historyId}
-                                    </Typography>
-                                </TableCell>
-                                <TableCell>
-                                    <Tooltip title={row.historyUser} placement="right">
-                                        <Link
-                                            underline="none"
-                                            component={RouterLink}
-                                            to={`/users/${row.historyUser}`}
-                                            color={'text.primary'}
+                                        <Typography
+                                            fontFamily='monospace'
+                                            variant='body2'
                                         >
-                                            <Typography fontFamily='monospace'>
-                                                {row.historyUser.substring(0, 8)}
-                                            </Typography>
-                                        </Link>
-                                    </Tooltip>
-                                </TableCell>
-                                <TableCell>{row.name}</TableCell>
-                                <TableCell align="right">
-                                    <Typography fontFamily='monospace'>
-                                        {row.stock}
-                                    </Typography>
-                                </TableCell>
-                                <TableCell align="right">
-                                    <Typography fontFamily='monospace'>
-                                        {row.safetyStock}
-                                    </Typography>
-                                </TableCell>
-                                <TableCell>{row.Unit.name}</TableCell>
-                                <TableCell>{row.Category.name}</TableCell>
-                                <TableCell>{row.remarks}</TableCell>
-                                <TableCell align="right">{DateTime.fromISO(row.createdAt).toLocal().toLocaleString(DateTime.DATETIME_SHORT)}</TableCell>
-                                <TableCell align="right">{DateTime.fromISO(row.updatedAt).toLocal().toLocaleString(DateTime.DATETIME_SHORT)}</TableCell>
-                                <TableCell align="right">{row.deletedAt !== null ? DateTime.fromISO(row.deletedAt).toLocal().toLocaleString(DateTime.DATETIME_SHORT) : null}</TableCell>
-                            </TableRow>
-                        ))}
-                        {loading || (cursor &&
-                            <TableRow
-                                onClick={() => { handleLoadMoreClick(); }}
-                                sx={{ cursor: 'pointer' }}
-                            >
-                                <TableCell
-                                    colSpan={11}
-                                    align='center'
-                                    sx={{ background: 'rgba(0, 0, 0, 0.06)' }}
+                                            {row.historyUser.substring(0, 8)}
+                                        </Typography>
+                                    </Link>
+                                </Tooltip>
+                            </TableCell>
+                            <TableCell>{row.name}</TableCell>
+                            <TableCell align="right">
+                                <Typography
+                                    fontFamily='monospace'
+                                    variant='body2'
                                 >
-                                    <Typography
-                                        variant='button'
-                                    >
-                                        Load More
-                                    </Typography>
-                                </TableCell>
-                            </TableRow>
-                        )}
-                        {loading &&
-                            <TableRow>
-                                <TableCell colSpan={11} padding='none'>
-                                    <LinearProgress />
-                                </TableCell>
-                            </TableRow>
-                        }
-                    </TableBody>
-                </Table>
-            </TableContainer>
-        </Stack>
+                                    {row.stock}
+                                </Typography>
+                            </TableCell>
+                            <TableCell align="right">
+                                <Typography
+                                    fontFamily='monospace'
+                                    variant='body2'
+                                >
+                                    {row.safetyStock}
+                                </Typography>
+                            </TableCell>
+                            <TableCell>{row.Unit.name}</TableCell>
+                            <TableCell>{row.Category.name}</TableCell>
+                            <TableCell>{row.remarks}</TableCell>
+                            <TableCell align="right">{DateTime.fromISO(row.createdAt).toLocal().toLocaleString(DateTime.DATETIME_SHORT)}</TableCell>
+                            <TableCell align="right">{DateTime.fromISO(row.updatedAt).toLocal().toLocaleString(DateTime.DATETIME_SHORT)}</TableCell>
+                            <TableCell align="right">{row.deletedAt !== null ? DateTime.fromISO(row.deletedAt).toLocal().toLocaleString(DateTime.DATETIME_SHORT) : null}</TableCell>
+                        </TableRow>
+                    ))}
+                    {loading || (cursor &&
+                        <TableRow
+                            onClick={() => { handleLoadMoreClick(); }}
+                            sx={{ cursor: 'pointer' }}
+                        >
+                            <TableCell
+                                colSpan={11}
+                                align='center'
+                                sx={{ background: 'rgba(0, 0, 0, 0.06)' }}
+                            >
+                                <Typography
+                                    variant='button'
+                                >
+                                    Load More
+                                </Typography>
+                            </TableCell>
+                        </TableRow>
+                    )}
+                    {loading &&
+                        <TableRow>
+                            <TableCell colSpan={11} padding='none'>
+                                <LinearProgress />
+                            </TableCell>
+                        </TableRow>
+                    }
+                </TableBody>
+            </Table>
+        </TableContainer>
     );
 }
 
@@ -215,70 +229,69 @@ export default function Show() {
     const navigate = useNavigate();
     const location = useLocation();
     const params = useParams();
+    const { enqueueSnackbar, closeSnackbar } = useSnackbar();
 
     const [authContext,] = React.useContext(AuthContext);
 
     const [loading, setLoading] = React.useState(false);
     const [item, setItem] = React.useState<Item | null>(null);
 
-    React.useEffect(() => {
+    useAsyncEffect(async isActive => {
         setLoading(true);
-        axios.get<Item>(`/api${location.pathname}`)
+        await axios.get<Item>(`/api${location.pathname}`)
             .then(result => result.data)
             .then(result => {
-                    setItem(result);
-                }
-            )
+                setItem(result);
+            })
+            .catch(error => {
+                enqueueSnackbar('Error loading data', { variant: 'error' });
+            })
             .finally(() => {
                 setLoading(false);
             });
     }, [location.pathname]);
 
-    function handleEditItem() {
-        navigate('edit');
-    }
-
-    function handleDestroyItem() {
-        return axios.delete(`/api${location.pathname}`)
+    async function handleDestroyItem() {
+        await axios.delete(`/api${location.pathname}`)
             .then(result => result.data)
             .then(result => {
-                    navigate('..', { replace: true });
-                }
-            )
-            .finally(() => {
-
+                navigate('/', { replace: true });
+                navigate(`../${params.itemID}`, { replace: true });
+                enqueueSnackbar('Destroy item successful', { variant: 'success' });
+            })
+            .catch(error => {
+                enqueueSnackbar('Destroy item failed', { variant: 'error' });
             });
     }
 
-    function handleRestoreItem() {
-        return axios.put(`/api${location.pathname}/restore`)
+    async function handleRestoreItem() {
+        await axios.put(`/api${location.pathname}/restore`)
             .then(result => result.data)
             .then(result => {
-                    navigate(`../${params.itemID}`, { replace: true });
-                }
-            )
-            .finally(() => {
-
+                navigate('/', { replace: true });
+                navigate(`../${params.itemID}`, { replace: true });
+                enqueueSnackbar('Restore item successful', { variant: 'success' });
+            })
+            .catch(error => {
+                enqueueSnackbar('Restore item failed', { variant: 'error' });
             });
     }
-
 
     return (
-        <Box>
+        <Stack
+            sx={{
+                boxSizing: 'border-box',
+                flex: '1 1 auto',
+            }}
+        >
             {loading ?
                 <LinearProgress />
                 :
-                <Stack
-                    spacing={2}
-                    sx={{
-                        marginY: 2
-                    }}
-                >
+                <React.Fragment>
                     <Box
                         sx={{
                             display: 'flex',
-                            justifyContent: 'flex-start',
-                            marginX: 2,
+                            padding: 2,
                         }}
                     >
                         <Stack
@@ -321,7 +334,8 @@ export default function Show() {
                                             <Button
                                                 startIcon={<EditIcon />}
                                                 variant="contained"
-                                                onClick={handleEditItem}
+                                                component={RouterLink}
+                                                to={`edit`}
                                             >
                                                 Edit
                                             </Button>
@@ -484,14 +498,18 @@ export default function Show() {
                             {
                                 authContext?.user.admin &&
                                 <React.Fragment>
-                                    <Divider />
+                                    <Divider
+                                        sx={{
+                                            marginTop: 2,
+                                        }}
+                                    />
                                     <History />
                                 </React.Fragment>
                             }
                         </React.Fragment>
                     }
-                </Stack>
+                </React.Fragment>
             }
-        </Box>
+        </Stack >
     );
-}
+};

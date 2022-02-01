@@ -12,7 +12,7 @@ import { LoadingButton } from '@mui/lab';
 
 
 export interface DeleteDialogButtonProps {
-    handleDelete: () => Promise<any>;
+    handleDelete: () => Promise<void>;
 }
 
 export function DeleteDialogButton(props: DeleteDialogButtonProps) {

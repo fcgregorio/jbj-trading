@@ -19,11 +19,14 @@ import { DeleteDialogButton } from '../DeleteDialogButton';
 import { DateTime } from 'luxon';
 import { RestoreDialogButton } from '../RestoreDialogButton';
 import { User, UserHistory } from './Users';
+import { useSnackbar } from 'notistack';
+import { useAsyncEffect } from 'use-async-effect';
 
 function History() {
     const location = useLocation();
     const navigate = useNavigate();
     const params = useParams();
+    const { enqueueSnackbar, closeSnackbar } = useSnackbar();
 
     const [loading, setLoading] = React.useState(false);
     const [cursor, setCursor] = React.useState<number | null>(null);
@@ -31,40 +34,39 @@ function History() {
     const [count, setCount] = React.useState<number | null>(null);
     const [userHistories, setUserHistories] = React.useState<UserHistory[]>([]);
 
-    React.useEffect(() => {
+    useAsyncEffect(async isActive => {
         setLoading(true);
-        axios.get<{ count: number; results: UserHistory[]; }>(`/api${location.pathname}/histories`)
+        await axios.get<
+            { count: number; results: UserHistory[]; }
+        >(
+            `/api${location.pathname}/histories`)
             .then(result => result.data)
-            .then(
-                (data) => {
-                    setCount(data.count);
-                    setUserHistories(data.results);
-                    if (data.results.length === data.count) {
-                        setCursor(null);
-                    } else if (data.results.length !== 0) {
-                        setCursor(data.results[data.results.length - 1].historyId);
-                    } else {
-                        setCursor(null);
-                    }
-                    setLoading(false);
-                },
-                // Note: it's important to handle errors here
-                // instead of a catch() block so that we don't swallow
-                // exceptions from actual bugs in components.
-                (error) => {
-                    setLoading(false);
+            .then(data => {
+                setCount(data.count);
+                setUserHistories(data.results);
+                if (data.results.length === data.count) {
+                    setCursor(null);
+                } else if (data.results.length !== 0) {
+                    setCursor(data.results[data.results.length - 1].historyId);
+                } else {
+                    setCursor(null);
                 }
-            )
+            })
+            .catch(error => {
+                enqueueSnackbar('Error loading data', { variant: 'error' });
+            })
             .finally(() => {
                 setLoading(false);
             });
     }, [location.pathname]);
 
-    function handleLoadMoreClick() {
+    async function handleLoadMoreClick() {
         setLoading(true);
         const source = axios.CancelToken.source();
         cancelTokenSourceRef.current = source;
-        axios.get<{ count: number; results: UserHistory[]; }>(
+        await axios.get<
+            { count: number; results: UserHistory[]; }
+        >(
             `/api${location.pathname}/histories`,
             {
                 params: {
@@ -74,136 +76,146 @@ function History() {
             },
         )
             .then(result => result.data)
-            .then(
-                (data) => {
-                    setCount(data.count);
-                    const newItemHistories = [...userHistories, ...data.results];
-                    setUserHistories(newItemHistories);
-                    if (newItemHistories.length === data.count) {
-                        setCursor(null);
-                    } else if (data.results.length !== 0) {
-                        setCursor(data.results[data.results.length - 1].historyId);
-                    } else {
-                        setCursor(null);
-                    }
-                    setLoading(false);
-                },
-                // Note: it's important to handle errors here
-                // instead of a catch() block so that we don't swallow
-                // exceptions from actual bugs in components.
-                (error) => {
-                    setLoading(false);
+            .then(data => {
+                setCount(data.count);
+                const newItemHistories = [...userHistories, ...data.results];
+                setUserHistories(newItemHistories);
+                if (newItemHistories.length === data.count) {
+                    setCursor(null);
+                } else if (data.results.length !== 0) {
+                    setCursor(data.results[data.results.length - 1].historyId);
+                } else {
+                    setCursor(null);
                 }
-            );
+            })
+            .catch(error => {
+                enqueueSnackbar('Error loading data', { variant: 'error' });
+            })
+            .finally(() => {
+                setLoading(false);
+            });
     }
 
     return (
-        <Stack spacing={2}
+        <TableContainer
             sx={{
-                marginY: 2
-            }}>
-            <TableContainer>
-                <Table sx={{ minWidth: 650 }} size="small" >
-                    <TableHead>
+                flex: '1 1 auto',
+                overflowY: 'scroll',
+                minHeight: '360px',
+            }}
+        >
+            <Table
+                size="small"
+                stickyHeader
+            >
+                <TableHead>
+                    <TableRow>
+                        <TableCell>History ID</TableCell>
+                        <TableCell>History User</TableCell>
+                        <TableCell>Username</TableCell>
+                        <TableCell>Password</TableCell>
+                        <TableCell>First Name</TableCell>
+                        <TableCell>Last Name</TableCell>
+                        <TableCell align="right">Admin</TableCell>
+                        <TableCell align="right">Created At</TableCell>
+                        <TableCell align="right">Updated At</TableCell>
+                        <TableCell align="right">Deleted At</TableCell>
+                    </TableRow>
+                </TableHead>
+                <TableBody>
+                    {count !== null &&
                         <TableRow>
-                            <TableCell>History ID</TableCell>
-                            <TableCell>History User</TableCell>
-                            <TableCell>Username</TableCell>
-                            <TableCell>Password</TableCell>
-                            <TableCell>First Name</TableCell>
-                            <TableCell>Last Name</TableCell>
-                            <TableCell align="right">Admin</TableCell>
-                            <TableCell align="right">Created At</TableCell>
-                            <TableCell align="right">Updated At</TableCell>
-                            <TableCell align="right">Deleted At</TableCell>
+                            <TableCell
+                                colSpan={10}
+                                align='right'
+                                sx={{ background: 'rgba(0, 0, 0, 0.06)' }}
+                            >
+                                <Typography
+                                    fontFamily='monospace'
+                                    variant='overline'
+                                >
+                                    {count} {count === 1 ? 'item' : 'items'}
+                                </Typography>
+                            </TableCell>
                         </TableRow>
-                    </TableHead>
-                    <TableBody>
-                        {count !== null &&
-                            <TableRow>
-                                <TableCell
-                                    colSpan={10}
-                                    align='right'
-                                    sx={{ background: 'rgba(0, 0, 0, 0.06)' }}
+                    }
+                    {userHistories.map((row: any) => (
+                        <TableRow
+                            key={row.id}
+                            sx={{
+                                '&:last-child td, &:last-child th': { border: 0 },
+                            }}
+                        >
+                            <TableCell>
+                                <Typography
+                                    fontFamily='monospace'
+                                    variant='body2'
                                 >
-                                    <Typography
-                                        fontFamily='monospace'
-                                        variant='overline'
+                                    {row.historyId}
+                                </Typography>
+                            </TableCell>
+                            <TableCell>
+                                <Tooltip title={row.historyUser} placement="right">
+                                    <Link
+                                        underline="none"
+                                        component={RouterLink}
+                                        to={`/users/${row.historyUser}`}
+                                        color={'text.primary'}
                                     >
-                                        {count} {count === 1 ? 'item' : 'items'}
-                                    </Typography>
-                                </TableCell>
-                            </TableRow>
-                        }
-                        {userHistories.map((row: any) => (
-                            <TableRow
-                                key={row.id}
-                                sx={{
-                                    '&:last-child td, &:last-child th': { border: 0 },
-                                }}
-                            >
-                                <TableCell>
-                                    <Typography fontFamily='monospace'>
-                                        {row.historyId}
-                                    </Typography>
-                                </TableCell>
-                                <TableCell>
-                                    <Tooltip title={row.historyUser} placement="right">
-                                        <Link
-                                            underline="none"
-                                            component={RouterLink}
-                                            to={`/users/${row.historyUser}`}
-                                            color={'text.primary'}
+                                        <Typography
+                                            fontFamily='monospace'
+                                            variant='body2'
                                         >
-                                            <Typography fontFamily='monospace'>
-                                                {row.historyUser.substring(0, 8)}
-                                            </Typography>
-                                        </Link>
-                                    </Tooltip>
-                                </TableCell>
-                                <TableCell>{row.username}</TableCell>
-                                <TableCell>{row.password.substring(0, 8) + '...$' + row.password.substring(37, 37 + 8) + '...'}</TableCell>
-                                <TableCell>{row.firstName}</TableCell>
-                                <TableCell>{row.lastName}</TableCell>
-                                <TableCell align="right">
-                                    <Typography fontFamily='monospace'>
-                                        {row.admin.toString()}
-                                    </Typography>
-                                </TableCell>
-                                <TableCell align="right">{DateTime.fromISO(row.createdAt).toLocal().toLocaleString(DateTime.DATETIME_SHORT)}</TableCell>
-                                <TableCell align="right">{DateTime.fromISO(row.updatedAt).toLocal().toLocaleString(DateTime.DATETIME_SHORT)}</TableCell>
-                                <TableCell align="right">{row.deletedAt !== null ? DateTime.fromISO(row.deletedAt).toLocal().toLocaleString(DateTime.DATETIME_SHORT) : null}</TableCell>
-                            </TableRow>
-                        ))}
-                        {loading || (cursor &&
-                            <TableRow
-                                onClick={() => { handleLoadMoreClick(); }}
-                                sx={{ cursor: 'pointer' }}
-                            >
-                                <TableCell
-                                    colSpan={10}
-                                    align='center'
-                                    sx={{ background: 'rgba(0, 0, 0, 0.06)' }}
+                                            {row.historyUser.substring(0, 8)}
+                                        </Typography>
+                                    </Link>
+                                </Tooltip>
+                            </TableCell>
+                            <TableCell>{row.username}</TableCell>
+                            <TableCell>{row.password.substring(0, 8) + '...$' + row.password.substring(37, 37 + 8) + '...'}</TableCell>
+                            <TableCell>{row.firstName}</TableCell>
+                            <TableCell>{row.lastName}</TableCell>
+                            <TableCell align="right">
+                                <Typography
+                                    fontFamily='monospace'
+                                    variant='body2'
                                 >
-                                    <Typography
-                                        variant='button'
-                                    >
-                                        Load More
-                                    </Typography>
-                                </TableCell>
-                            </TableRow>
-                        )}
-                        {loading &&
-                            <TableRow>
-                                <TableCell colSpan={10} padding='none'>
-                                    <LinearProgress />
-                                </TableCell>
-                            </TableRow>
-                        }
-                    </TableBody>
-                </Table>
-            </TableContainer>
-        </Stack>
+                                    {row.admin.toString()}
+                                </Typography>
+                            </TableCell>
+                            <TableCell align="right">{DateTime.fromISO(row.createdAt).toLocal().toLocaleString(DateTime.DATETIME_SHORT)}</TableCell>
+                            <TableCell align="right">{DateTime.fromISO(row.updatedAt).toLocal().toLocaleString(DateTime.DATETIME_SHORT)}</TableCell>
+                            <TableCell align="right">{row.deletedAt !== null ? DateTime.fromISO(row.deletedAt).toLocal().toLocaleString(DateTime.DATETIME_SHORT) : null}</TableCell>
+                        </TableRow>
+                    ))}
+                    {loading || (cursor &&
+                        <TableRow
+                            onClick={() => { handleLoadMoreClick(); }}
+                            sx={{ cursor: 'pointer' }}
+                        >
+                            <TableCell
+                                colSpan={10}
+                                align='center'
+                                sx={{ background: 'rgba(0, 0, 0, 0.06)' }}
+                            >
+                                <Typography
+                                    variant='button'
+                                >
+                                    Load More
+                                </Typography>
+                            </TableCell>
+                        </TableRow>
+                    )}
+                    {loading &&
+                        <TableRow>
+                            <TableCell colSpan={10} padding='none'>
+                                <LinearProgress />
+                            </TableCell>
+                        </TableRow>
+                    }
+                </TableBody>
+            </Table>
+        </TableContainer>
     );
 }
 
@@ -211,74 +223,70 @@ export default function Show() {
     const navigate = useNavigate();
     const location = useLocation();
     const params = useParams();
+    const { enqueueSnackbar, closeSnackbar } = useSnackbar();
 
     const [authContext,] = React.useContext(AuthContext);
 
     const [loading, setLoading] = React.useState(false);
     const [user, setUser] = React.useState<User | null>(null);
 
-    React.useEffect(() => {
+    useAsyncEffect(async isActive => {
         setLoading(true);
-        axios.get<User>(`/api${location.pathname}`)
+        await axios.get<User>(`/api${location.pathname}`)
             .then(result => result.data)
-            .then(result => {
-                setUser(result);
-            }
-            )
+            .then(data => {
+                setUser(data);
+            })
+            .catch(error => {
+                enqueueSnackbar('Error loading data', { variant: 'error' });
+            })
             .finally(() => {
                 setLoading(false);
             });
     }, [location.pathname]);
 
-    function handleEditUser() {
-        navigate('edit');
-    }
-
-    function handleChangePassword() {
-        navigate('change-password');
-    }
-
-    function handleDestroyUser() {
-        return axios.delete(`/api${location.pathname}`)
+    async function handleDestroyUser() {
+        await axios.delete(`/api${location.pathname}`)
             .then(result => result.data)
             .then(result => {
-                navigate('..', { replace: true });
-            }
-            )
-            .finally(() => {
-
+                navigate('/', { replace: true });
+                navigate(`../${params.userID}`, { replace: true });
+                enqueueSnackbar('Destroy user successful', { variant: 'success' });
+            })
+            .catch(error => {
+                enqueueSnackbar('Destroy user failed', { variant: 'error' });
             });
     }
 
-    function handleRestoreUser() {
-        return axios.put(`/api${location.pathname}/restore`)
+    async function handleRestoreUser() {
+        await axios.put(`/api${location.pathname}/restore`)
             .then(result => result.data)
             .then(result => {
+                navigate('/', { replace: true });
                 navigate(`../${params.userID}`, { replace: true });
-            }
-            )
-            .finally(() => {
-
+                enqueueSnackbar('Restore user successful', { variant: 'success' });
+            })
+            .catch(error => {
+                enqueueSnackbar('Restore user failed', { variant: 'error' });
             });
     }
 
 
     return (
-        <Box>
+        <Stack
+            sx={{
+                boxSizing: 'border-box',
+                flex: '1 1 auto',
+            }}
+        >
             {loading ?
                 <LinearProgress />
                 :
-                <Stack
-                    spacing={2}
-                    sx={{
-                        marginY: 2
-                    }}
-                >
+                <React.Fragment>
                     <Box
                         sx={{
                             display: 'flex',
-                            justifyContent: 'flex-start',
-                            marginX: 2,
+                            padding: 2,
                         }}
                     >
                         <Stack
@@ -321,14 +329,16 @@ export default function Show() {
                                             <Button
                                                 startIcon={<EditIcon />}
                                                 variant="contained"
-                                                onClick={handleEditUser}
+                                                component={RouterLink}
+                                                to={`edit`}
                                             >
                                                 Edit
                                             </Button>
                                             <Button
                                                 startIcon={<PasswordIcon />}
                                                 variant="contained"
-                                                onClick={handleChangePassword}
+                                                component={RouterLink}
+                                                to={`change-password`}
                                             >
                                                 Change Password
                                             </Button>
@@ -445,14 +455,18 @@ export default function Show() {
                             {
                                 authContext?.user.admin &&
                                 <React.Fragment>
-                                    <Divider />
+                                    <Divider
+                                        sx={{
+                                            marginTop: 2,
+                                        }}
+                                    />
                                     <History />
                                 </React.Fragment>
                             }
                         </React.Fragment>
                     }
-                </Stack>
+                </React.Fragment>
             }
-        </Box>
+        </Stack >
     );
 };

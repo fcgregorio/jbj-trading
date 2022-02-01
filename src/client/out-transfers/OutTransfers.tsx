@@ -1,10 +1,12 @@
 import * as React from 'react';
 import {
-    Route, Routes, useLocation
+    Route,
+    Routes,
 } from 'react-router-dom';
 import Index from './Index';
 
 export interface OutTransfer {
+    id: string;
     item: string;
     transaction: string;
     quantity: number;

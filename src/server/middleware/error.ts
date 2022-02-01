@@ -10,11 +10,24 @@ export function errorHandlerMiddleware(error: any, req: Request, res: Response, 
     }
 
     if (error instanceof EmptyResultError) {
-        res.status(404).send(error.message);
+        res
+            .status(404)
+            .send(error.message);
     } else if (error instanceof ValidationError) {
-        res.status(403).send(error.message);
+        res
+            .status(422)
+            .json({
+                errors: error.errors.map(item => {
+                    return {
+                        message: item.message,
+                        path: item.path
+                    };
+                })
+            });
     } else if (error instanceof BaseError) {
-        res.status(500).send(error.message);
+        res
+            .status(500)
+            .send(error.message);
     } else {
         res.sendStatus(500);
     }

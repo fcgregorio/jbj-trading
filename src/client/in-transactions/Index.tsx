@@ -7,6 +7,7 @@ import {
 } from "react-router-dom";
 import {
     Add as AddIcon,
+    Search as SearchIcon
 } from '@mui/icons-material';
 import {
     DesktopDatePicker,
@@ -14,6 +15,7 @@ import {
 import {
     Box,
     Button,
+    InputAdornment,
     LinearProgress,
     Link,
     Stack,
@@ -41,10 +43,12 @@ import {
 import {
     InTransaction,
 } from './InTransactions';
+import { useSnackbar } from 'notistack';
 
 export default function Index() {
     const navigate = useNavigate();
     const location = useLocation();
+    const { enqueueSnackbar, closeSnackbar } = useSnackbar();
 
     const [search, setSearch] = React.useState<string>('');
     const [date, setDate] = React.useState<DateTime>(DateTime.now());
@@ -56,15 +60,10 @@ export default function Index() {
     const [count, setCount] = React.useState<number | null>(null);
     const [inTransactions, setInTransactions] = React.useState<InTransaction[]>([]);
 
-    function handleCreateInTransaction() {
-        const newWindow = window.open(resolvePath('create', location.pathname).pathname, '_blank', 'noopener,noreferrer');
-        if (newWindow) newWindow.opener = null;
-    }
-
     const queryInTransactions = React.useMemo(
         () =>
             debounce(
-                (
+                async (
                     request: {
                         input: string;
                         date: string | null;
@@ -72,10 +71,13 @@ export default function Index() {
                     startCallback: () => void,
                     callback: (results: any) => void,
                     errorCallback: () => void,
+                    finallyCallback: () => void,
                     cancelToken: CancelToken,
                 ) => {
                     startCallback();
-                    axios.get<never, AxiosResponse<any>>(
+                    await axios.get<
+                        { count: number; results: InTransaction[]; }
+                    >(
                         `/api${location.pathname}`,
                         {
                             params: {
@@ -83,20 +85,18 @@ export default function Index() {
                                 date: request.date,
                             },
                             cancelToken: cancelToken,
-                        },
-                    )
+                        })
                         .then(result => result.data)
-                        .then(
-                            (data) => {
-                                callback(data);
-                            },
-                            // Note: it's important to handle errors here
-                            // instead of a catch() block so that we don't swallow
-                            // exceptions from actual bugs in components.
-                            (error) => {
-                                errorCallback();
-                            }
-                        );
+                        .then(data => {
+                            callback(data);
+                        })
+                        .catch(error => {
+                            if (axios.isCancel(error)) return;
+                            errorCallback();
+                        })
+                        .finally(() => {
+                            finallyCallback();
+                        });
                 },
                 200,
             ),
@@ -127,7 +127,7 @@ export default function Index() {
                 setInTransactions([]);
                 setLoading(true);
             },
-            (data: any) => {
+            data => {
                 setCount(data.count);
                 setInTransactions(data.results);
                 if (data.results.length === data.count) {
@@ -137,7 +137,9 @@ export default function Index() {
                 } else {
                     setCursor(null);
                 }
-                setLoading(false);
+            },
+            () => {
+                enqueueSnackbar('Error loading data', { variant: 'error' });
             },
             () => {
                 setLoading(false);
@@ -149,11 +151,13 @@ export default function Index() {
         };
     }, [queryInTransactions, search, date]);
 
-    function handleLoadMoreClick() {
+    async function handleLoadMoreClick() {
         setLoading(true);
         const source = axios.CancelToken.source();
         cancelTokenSourceRef.current = source;
-        axios.get<never, AxiosResponse<any>>(
+        await axios.get<
+            { count: number; results: InTransaction[]; }
+        >(
             `/api${location.pathname}`,
             {
                 params: {
@@ -162,42 +166,40 @@ export default function Index() {
                     cursor: cursor,
                 },
                 cancelToken: source.token,
-            },
-        )
+            })
             .then(result => result.data)
-            .then(
-                (data) => {
-                    setCount(data.count);
-                    const newInTransactions = [...inTransactions, ...data.results];
-                    setInTransactions(newInTransactions);
-                    if (newInTransactions.length === data.count) {
-                        setCursor(null);
-                    } else if (data.results.length !== 0) {
-                        setCursor(data.results[data.results.length - 1].id);
-                    } else {
-                        setCursor(null);
-                    }
-                    setLoading(false);
-                },
-                // Note: it's important to handle errors here
-                // instead of a catch() block so that we don't swallow
-                // exceptions from actual bugs in components.
-                (error) => {
-                    setLoading(false);
+            .then(data => {
+                setCount(data.count);
+                const newInTransactions = [...inTransactions, ...data.results];
+                setInTransactions(newInTransactions);
+                if (newInTransactions.length === data.count) {
+                    setCursor(null);
+                } else if (data.results.length !== 0) {
+                    setCursor(data.results[data.results.length - 1].id);
+                } else {
+                    setCursor(null);
                 }
-            );
+            })
+            .catch(error => {
+                if (axios.isCancel(error)) return;
+                enqueueSnackbar('Error loading data', { variant: 'error' });
+            })
+            .finally(() => {
+                setLoading(false);
+            });
     }
 
     return (
-        <Stack spacing={2}
+        <Stack
             sx={{
-                marginY: 2
-            }}>
+                boxSizing: 'border-box',
+                flex: '1 1 auto',
+            }}
+        >
             <Box
                 sx={{
                     display: 'flex',
-                    justifyContent: 'flex-start',
-                    marginX: 2,
+                    padding: 2,
                 }}
             >
                 <Stack direction="row" spacing={2}>
@@ -209,6 +211,11 @@ export default function Index() {
                         onChange={(event) => { setSearch(event.target.value); }}
                         InputProps={{
                             type: 'search',
+                            startAdornment: (
+                                <InputAdornment position="start">
+                                    <SearchIcon />
+                                </InputAdornment>
+                            ),
                         }}
                     />
                     <DesktopDatePicker
@@ -241,15 +248,25 @@ export default function Index() {
                         <Button
                             startIcon={<AddIcon />}
                             variant="contained"
-                            onClick={handleCreateInTransaction}
+                            component={RouterLink}
+                            to={`create`}
                         >
                             Add
                         </Button>
                     </Box>
                 </Stack>
             </Box>
-            <TableContainer>
-                <Table sx={{ minWidth: 650 }} size="small" >
+            <TableContainer
+                sx={{
+                    flex: '1 1 auto',
+                    overflowY: 'scroll',
+                    minHeight: '360px',
+                }}
+            >
+                <Table
+                    size="small"
+                    stickyHeader
+                >
                     <TableHead>
                         <TableRow>
                             <TableCell>ID</TableCell>
@@ -294,7 +311,10 @@ export default function Index() {
                                             to={row.id}
                                             color={'text.primary'}
                                         >
-                                            <Typography fontFamily='monospace'>
+                                            <Typography
+                                                fontFamily='monospace'
+                                                variant='body2'
+                                            >
                                                 {row.id.substring(0, 8)}
                                             </Typography>
                                         </Link>
@@ -305,7 +325,10 @@ export default function Index() {
                                 <TableCell align="right">{row.dateOfDeliveryReceipt !== null ? DateTime.fromISO(row.dateOfDeliveryReceipt).toLocal().toLocaleString(DateTime.DATE_SHORT) : ''}</TableCell>
                                 <TableCell align="right">{row.dateReceived !== null ? DateTime.fromISO(row.dateReceived).toLocal().toLocaleString(DateTime.DATE_SHORT) : ''}</TableCell>
                                 <TableCell align="right">
-                                    <Typography fontFamily='monospace'>
+                                    <Typography
+                                        fontFamily='monospace'
+                                        variant='body2'
+                                    >
                                         {row.void.toString()}
                                     </Typography>
                                 </TableCell>

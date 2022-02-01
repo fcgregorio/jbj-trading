@@ -1,6 +1,5 @@
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import { IconButton, ListItemButton, Menu, MenuItem, Tooltip } from '@mui/material';
-import AppBar from '@mui/material/AppBar';
 import Box from '@mui/material/Box';
 import Divider from '@mui/material/Divider';
 import Drawer from '@mui/material/Drawer';
@@ -11,9 +10,8 @@ import Typography from '@mui/material/Typography';
 import * as React from 'react';
 import {
     Outlet,
-    useLocation, 
-    useNavigate,
-    Link as RouterLink,
+    useLocation,
+    useNavigate
 } from "react-router-dom";
 import { AuthContext } from '../Context';
 
@@ -60,28 +58,23 @@ export default function Index() {
     }, [usernameElRef]);
 
     return (
-        <Box sx={{ display: 'flex' }}>
-            <AppBar
-                position="fixed"
-                sx={{ width: `calc(100% - ${drawerWidth}px)`, ml: `${drawerWidth}px` }}
-            >
-                <Toolbar variant="dense">
-                    {/* <Typography variant="h6" noWrap component="div">
-                                        Olbes
-                                    </Typography> */}
-                </Toolbar>
-            </AppBar>
+        <Box
+            sx={{
+                display: 'flex',
+            }}
+        >
             <Drawer
                 variant="permanent"
                 sx={{
                     width: drawerWidth,
-                    flexShrink: 0,
-                    [`& .MuiDrawer-paper`]: { width: drawerWidth, boxSizing: 'border-box' },
+                    flex: '0 0 auto',
+                    '& .MuiDrawer-paper': {
+                        width: drawerWidth,
+                        boxSizing: 'border-box',
+                    },
                 }}
             >
-                <Box
-                    sx={{ overflow: 'auto' }}
-                >
+                <Box>
                     <Toolbar variant="dense">
                         {authContext &&
                             <React.Fragment>
@@ -141,24 +134,26 @@ export default function Index() {
                             },
                         }}
                     >
-                        {/* <ListItemButton
-                                            selected={location.pathname === '/'}
-                                            key={'Dashboard'}
-                                            component="a"
-                                            href="/"
-                                            onClick={(event: React.MouseEvent<HTMLAnchorElement>) => {
-                                                event.preventDefault();
-                                                handleClick('/');
-                                            }}
-                                        >
-                                            <ListItemIcon>
-                                                <DashboardIcon />
-                                            </ListItemIcon>
-                                            <ListItemText
-                                                primary={'Dashboard'}
-                                            />
-                                        </ListItemButton>
-                                        <Divider /> */}
+                        {
+                            authContext?.user.admin &&
+                            <React.Fragment>
+                                <ListItemButton
+                                    selected={location.pathname === '/dashboard'}
+                                    key={'Dashboard'}
+                                    component="a"
+                                    href="/dashboard"
+                                    onClick={(event: React.MouseEvent<HTMLAnchorElement>) => {
+                                        event.preventDefault();
+                                        handleClick('/dashboard');
+                                    }}
+                                >
+                                    <ListItemText
+                                        primary={'Dashboard'}
+                                    />
+                                </ListItemButton>
+                                <Divider />
+                            </React.Fragment>
+                        }
                         <ListItemButton
                             selected={location.pathname === '/transactions'}
                             key={'Transactions'}
@@ -314,8 +309,15 @@ export default function Index() {
                     </List>
                 </Box>
             </Drawer>
-            <Box component="main" sx={{ flexGrow: 1 }} p={0}>
-                <Toolbar variant="dense" />
+            <Box
+                component="main"
+                sx={{
+                    display: 'flex',
+                    flex: '1 1 auto',
+                    height: '100vh',
+                }}
+                p={0}
+            >
                 <Outlet />
             </Box>
         </Box >

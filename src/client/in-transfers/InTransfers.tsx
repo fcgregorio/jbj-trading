@@ -6,6 +6,7 @@ import {
 import Index from './Index';
 
 export interface InTransfer {
+    id: string;
     item: string;
     transaction: string;
     quantity: number;

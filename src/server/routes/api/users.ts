@@ -1,7 +1,7 @@
 import { NextFunction, Request, Response, Router } from 'express';
 import sequelize, { User, UserAttributes, UserHistory, UserHistoryAttributes } from '../../sequelize';
 import { loginRequiredMiddleware, adminRequiredMiddleware } from '../../middleware/auth';
-import { Op, WhereOptions } from 'sequelize';
+import { Op, ValidationError, ValidationErrorItem, WhereOptions } from 'sequelize';
 
 const router = Router();
 router.use(loginRequiredMiddleware);
@@ -9,6 +9,26 @@ router.use(loginRequiredMiddleware);
 router.post('/', adminRequiredMiddleware, async function (req: Request, res: Response, next: NextFunction) {
     try {
         const result = await sequelize.transaction(async (t) => {
+            if (typeof req.body.password === 'string') {
+                if (req.body.password.length < 16) {
+                    throw new ValidationError(
+                        'ValidationError',
+                        [
+                            new ValidationErrorItem('Must be at least 16 characters long', undefined, 'password'),
+                        ]
+                    );
+                }
+
+                if (req.body.password.match("^[A-Za-z0-9]+$")) {
+                    throw new ValidationError(
+                        'ValidationError',
+                        [
+                            new ValidationErrorItem('Can only contain lowercase letters, uppercase letters, and characters', undefined, 'password'),
+                        ]
+                    );
+                }
+            }
+
             const password = await User.generatePassword(req.body.password);
 
             const user = await User.create(
@@ -45,29 +65,31 @@ router.get('/', adminRequiredMiddleware, async function (req: Request, res: Resp
             filters.showDeleted = false;
         }
 
-        let where: WhereOptions<UserAttributes> = {};
+        let whereAnd: any[] = [];
 
         const searchQuery = req.query.search as string;
         if (searchQuery !== undefined && searchQuery !== '') {
-            where = {
-                ...where,
-                [Op.or]: {
-                    username: {
-                        [Op.like]: '%' + searchQuery + '%', // TODO
+            whereAnd.push(
+                {
+                    [Op.or]: {
+                        username: {
+                            [Op.like]: `%${searchQuery}%`, // TODO
+                        },
+                        firstName: {
+                            [Op.like]: `%${searchQuery}%`, // TODO
+                        },
+                        lastName: {
+                            [Op.like]: `%${searchQuery}%`, // TODO
+                        },
                     },
-                    firstName: {
-                        [Op.like]: '%' + searchQuery + '%', // TODO
-                    },
-                    lastName: {
-                        [Op.like]: '%' + searchQuery + '%', // TODO
-                    },
-                },
-            };
-
+                }
+            );
         }
 
         const count = await User.count({
-            where: where,
+            where: {
+                [Op.and]: whereAnd,
+            },
             paranoid: !filters.showDeleted,
         });
 
@@ -82,32 +104,35 @@ router.get('/', adminRequiredMiddleware, async function (req: Request, res: Resp
                 },
             );
 
-            where = {
-                ...where,
-                [Op.or]: [
-                    {
-                        createdAt: {
-                            [Op.lt]: cursor.createdAt,
+            whereAnd.push(
+                {
+                    [Op.or]: [
+                        {
+                            createdAt: {
+                                [Op.lt]: cursor.createdAt,
+                            },
                         },
-                    },
-                    {
-                        [Op.and]: [
-                            {
-                                createdAt: cursor.createdAt,
-                            },
-                            {
-                                id: {
-                                    [Op.lt]: cursor.id,
+                        {
+                            [Op.and]: [
+                                {
+                                    createdAt: cursor.createdAt,
                                 },
-                            },
-                        ]
-                    },
-                ]
-            };
+                                {
+                                    id: {
+                                        [Op.lt]: cursor.id,
+                                    },
+                                },
+                            ]
+                        },
+                    ]
+                }
+            );
         }
 
         const results = await User.findAll({
-            where: where,
+            where: {
+                [Op.and]: whereAnd,
+            },
             attributes: { exclude: ['password'] },
             order: [
                 ['createdAt', 'DESC'],
@@ -152,12 +177,17 @@ router.get('/:id', adminRequiredMiddleware, async function (req: Request, res: R
 
 router.get('/:id/histories', adminRequiredMiddleware, async function (req: Request, res: Response, next: NextFunction) {
     try {
-        let where: WhereOptions<UserHistoryAttributes> = {
-            id: req.params.id,
-        };
+        let whereAnd: any[] = [];
+        whereAnd.push(
+            {
+                id: req.params.id,
+            }
+        );
 
         const count = await UserHistory.count({
-            where: where,
+            where: {
+                [Op.and]: whereAnd,
+            },
         });
 
         const cursorQuery = req.query.cursor as string;
@@ -170,16 +200,19 @@ router.get('/:id/histories', adminRequiredMiddleware, async function (req: Reque
                 },
             );
 
-            where = {
-                ...where,
-                historyId: {
-                    [Op.lt]: cursor.historyId,
-                },
-            };
+            whereAnd.push(
+                {
+                    historyId: {
+                        [Op.lt]: cursor.historyId,
+                    },
+                }
+            );
         }
 
         const results = await UserHistory.findAll({
-            where: where,
+            where: {
+                [Op.and]: whereAnd,
+            },
             order: [
                 ['historyId', 'DESC'],
             ],
@@ -228,6 +261,26 @@ router.put('/:id', adminRequiredMiddleware, async function (req: Request, res: R
 router.put('/:id/change-password', adminRequiredMiddleware, async function (req: Request, res: Response, next: NextFunction) {
     try {
         const result = await sequelize.transaction(async (t) => {
+            if (typeof req.body.password === 'string') {
+                if (req.body.password.length < 16) {
+                    throw new ValidationError(
+                        'ValidationError',
+                        [
+                            new ValidationErrorItem('Must be at least 16 characters long', undefined, 'password'),
+                        ]
+                    );
+                }
+
+                if (req.body.password.match("^[A-Za-z0-9]+$")) {
+                    throw new ValidationError(
+                        'ValidationError',
+                        [
+                            new ValidationErrorItem('Can only contain lowercase letters, uppercase letters, and characters', undefined, 'password'),
+                        ]
+                    );
+                }
+            }
+
             const password = await User.generatePassword(req.body.password);
 
             let user = await User.findByPk(

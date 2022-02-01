@@ -16,11 +16,14 @@ import { useFormik } from 'formik';
 import * as Yup from 'yup';
 import { ApiEditUnit, EditUnit, Unit } from './Units';
 import { DateTime } from 'luxon';
+import { useSnackbar } from 'notistack';
+import { useAsyncEffect } from 'use-async-effect';
 
 export default function Edit() {
     const navigate = useNavigate();
     const location = useLocation();
     const params = useParams();
+    const { enqueueSnackbar, closeSnackbar } = useSnackbar();
 
     const [loading, setLoading] = React.useState(false);
     const [locked, setLocked] = React.useState(false);
@@ -37,61 +40,68 @@ export default function Edit() {
                 .required('Required'),
         }),
         onSubmit: async values => {
-            try {
-                setLocked(true);
-
-                await axios.put<
-                    { id: string; },
-                    AxiosResponse<{ id: string; }>,
-                    ApiEditUnit
-                >(
-                    `/api${location.pathname}/..`,
-                    {
-                        name: values.name,
-                    },
-                );
-
-                navigate(`../${params.unitID}`, { replace: true });
-            } catch (error) {
-
-            } finally {
-                setLocked(false);
-            }
+            setLocked(true);
+            await axios.put<
+                { id: string; },
+                AxiosResponse<{ id: string; }>,
+                ApiEditUnit
+            >(
+                `/api${location.pathname}/..`,
+                {
+                    name: values.name,
+                })
+                .then(result => {
+                    navigate(`../${params.unitID}`, { replace: true });
+                    enqueueSnackbar('Edit unit successful', { variant: 'success' });
+                })
+                .catch(error => {
+                    enqueueSnackbar('Edit unit failed', { variant: 'error' });
+                    if (error.response) {
+                        const data = error.response.data;
+                        for (const e of data.errors) {
+                            formik.setFieldError(e.path, e.message);
+                        }
+                    }
+                })
+                .finally(() => {
+                    setLocked(false);
+                });
         },
     });
 
-    React.useEffect(() => {
+    useAsyncEffect(async isActive => {
         setLoading(true);
-        axios.get<Unit>(`/api${location.pathname}/..`)
+        await axios.get<Unit>(`/api${location.pathname}/..`)
             .then(result => result.data)
             .then(result => {
-                    formik.setFieldValue('name', result.name);
-                    formik.setFieldValue('createdAt', result.createdAt);
-                    formik.setFieldValue('updatedAt', result.updatedAt);
-                    formik.setFieldValue('deletedAt', result.deletedAt);
-                }
-            )
+                formik.setFieldValue('name', result.name);
+                formik.setFieldValue('createdAt', result.createdAt);
+                formik.setFieldValue('updatedAt', result.updatedAt);
+                formik.setFieldValue('deletedAt', result.deletedAt);
+            })
+            .catch(error => {
+                enqueueSnackbar('Error loading data', { variant: 'error' });
+            })
             .finally(() => {
                 setLoading(false);
             });
     }, [location.pathname]);
 
     return (
-        <Box>
+        <Stack
+            sx={{
+                boxSizing: 'border-box',
+                flex: '1 1 auto',
+            }}
+        >
             {loading ?
                 <LinearProgress />
                 :
-                <Stack
-                    spacing={2}
-                    sx={{
-                        marginY: 2
-                    }}
-                >
+                <React.Fragment>
                     <Box
                         sx={{
                             display: 'flex',
-                            justifyContent: 'flex-start',
-                            marginX: 2,
+                            padding: 2,
                         }}
                     >
                         <Stack direction="row" spacing={2}>
@@ -210,8 +220,8 @@ export default function Edit() {
                             />
                         </Stack>
                     }
-                </Stack>
+                </React.Fragment>
             }
-        </Box >
+        </Stack>
     );
 };

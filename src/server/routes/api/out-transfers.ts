@@ -53,7 +53,7 @@ router.use(loginRequiredMiddleware);
 
 router.get('/', async function (req: Request, res: Response, next: NextFunction) {
     try {
-        let where: WhereOptions<OutTransferAttributes> = {};
+        let whereAnd: any[] = [];
 
         const dateQuery = req.query.date as string;
         if (dateQuery !== undefined) {
@@ -62,26 +62,28 @@ router.get('/', async function (req: Request, res: Response, next: NextFunction)
                 res.status(400).send('Invalid date');
                 return;
             } else {
-                where = {
-                    ...where,
-                    createdAt: {
-                        [Op.gte]: date.startOf('day').toJSDate(),
-                        [Op.lte]: date.endOf('day').toJSDate(),
-                    },
-                };
+                whereAnd.push(
+                    {
+                        createdAt: {
+                            [Op.gte]: date.startOf('day').toJSDate(),
+                            [Op.lte]: date.endOf('day').toJSDate(),
+                        },
+                    }
+                );
             }
         }
 
-        let whereItem: WhereOptions<ItemAttributes> = {};
+        let whereItemAnd: any[] = [];
 
         const searchQuery = req.query.search as string;
         if (searchQuery !== undefined && searchQuery !== '') {
-            whereItem = {
-                ...whereItem,
-                name: {
-                    [Op.like]: '%' + searchQuery + '%', // TODO
-                },
-            };
+            whereItemAnd.push(
+                {
+                    name: {
+                        [Op.like]: `%${searchQuery}%`, // TODO
+                    },
+                }
+            );
         }
 
         const count = await OutTransfer.count({
@@ -90,10 +92,14 @@ router.get('/', async function (req: Request, res: Response, next: NextFunction)
                     model: Item,
                     attributes: ['id', 'name'],
                     paranoid: false,
-                    where: whereItem,
+                    where: {
+                        [Op.and]: whereItemAnd,
+                    },
                 },
             ],
-            where: where,
+            where: {
+                [Op.and]: whereAnd,
+            },
         });
 
         const cursorQuery = req.query.cursor as string;
@@ -106,28 +112,29 @@ router.get('/', async function (req: Request, res: Response, next: NextFunction)
                 },
             );
 
-            where = {
-                ...where,
-                [Op.or]: [
-                    {
-                        createdAt: {
-                            [Op.lt]: cursor.createdAt,
+            whereAnd.push(
+                {
+                    [Op.or]: [
+                        {
+                            createdAt: {
+                                [Op.lt]: cursor.createdAt,
+                            },
                         },
-                    },
-                    {
-                        [Op.and]: [
-                            {
-                                createdAt: cursor.createdAt,
-                            },
-                            {
-                                id: {
-                                    [Op.lt]: cursor.transaction,
+                        {
+                            [Op.and]: [
+                                {
+                                    createdAt: cursor.createdAt,
                                 },
-                            },
-                        ]
-                    },
-                ]
-            };
+                                {
+                                    id: {
+                                        [Op.lt]: cursor.transaction,
+                                    },
+                                },
+                            ]
+                        },
+                    ]
+                }
+            );
         }
 
         const results = await OutTransfer.findAll({
@@ -147,10 +154,14 @@ router.get('/', async function (req: Request, res: Response, next: NextFunction)
                             paranoid: false,
                         },
                     ],
-                    where: whereItem,
+                    where: {
+                        [Op.and]: whereItemAnd,
+                    },
                 },
             ],
-            where: where,
+            where: {
+                [Op.and]: whereAnd,
+            },
             order: [
                 ['createdAt', 'DESC'],
                 ['id', 'DESC'],

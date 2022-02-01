@@ -4,26 +4,26 @@ import CssBaseline from '@mui/material/CssBaseline';
 import axios from 'axios';
 import * as React from 'react';
 import {
-    Route, useNavigate, Routes,
-    useLocation,
+    Route,
+    Routes,
 } from "react-router-dom";
 import './App.css';
-import { AuthContext } from './Context';
-import Login from './login/Index';
-import { User } from './models';
-import Home from './home/Index';
 import Categories from './categories/Categories';
+import { AuthContext } from './Context';
+import Dashboard from './dashboard/Index';
 import InTransactions from './in-transactions/InTransactions';
 import InTransfers from './in-transfers/InTransfers';
 import Items from './items/Items';
+import Login from './login/Index';
+import Main from './main/Index';
+import { User } from './models';
 import OutTransactions from './out-transactions/OutTransactions';
 import OutTransfers from './out-transfers/OutTransfers';
+import SnackbarProvider from './SnackbarProvider';
 import Transactions from './transactions/Transactions';
 import Transfers from './transfers/Transfers';
 import Units from './units/Units';
 import Users from './users/Users';
-import { Fade } from '@mui/material';
-import { SnackbarProvider } from 'notistack';
 
 // https://usehooks.com/useLocalStorage
 function useLocalStorage<T>(key: string, initialValue: T) {
@@ -88,14 +88,7 @@ function App() {
     return (
         <AuthContext.Provider value={[authContext, setAuthContext]}>
             <LocalizationProvider dateAdapter={DateAdapter}>
-                {/* <SnackbarProvider
-                    maxSnack={3}
-                    anchorOrigin={{
-                        vertical: 'bottom',
-                        horizontal: 'right',
-                    }}
-                // TransitionComponent={Fade}
-                > */}
+                <SnackbarProvider>
                     <CssBaseline />
                     <Routes>
                         <Route
@@ -103,8 +96,12 @@ function App() {
                             element={<Login />}
                         />
                         <Route
-                            element={<Home />}
+                            element={<Main />}
                         >
+                            <Route
+                                path='dashboard/*'
+                                element={<Dashboard />}
+                            />
                             <Route
                                 path='transactions/*'
                                 element={<Transactions />}
@@ -150,7 +147,7 @@ function App() {
                             />
                         </Route>
                     </Routes>
-                {/* </SnackbarProvider> */}
+                </SnackbarProvider>
             </LocalizationProvider >
         </AuthContext.Provider>
     );

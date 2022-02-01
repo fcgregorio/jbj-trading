@@ -38,21 +38,24 @@ router.get('/', async function (req: Request, res: Response, next: NextFunction)
             filters.showDeleted = false;
         }
 
-        let where: WhereOptions<CategoryAttributes> = {};
+        let whereAnd: any[] = [];
 
         const searchQuery = req.query.search as string;
         if (searchQuery !== undefined && searchQuery !== '') {
-            where = {
-                ...where,
-                name: {
-                    [Op.like]: '%' + searchQuery + '%', // TODO
-                },
-            };
+            whereAnd.push(
+                {
+                    name: {
+                        [Op.like]: `%${searchQuery}%`, // TODO
+                    },
+                }
+            );
 
         }
 
         const count = await Category.count({
-            where: where,
+            where: {
+                [Op.and]: whereAnd,
+            },
         });
 
         const cursorQuery = req.query.cursor as string;
@@ -65,32 +68,35 @@ router.get('/', async function (req: Request, res: Response, next: NextFunction)
                 },
             );
 
-            where = {
-                ...where,
-                [Op.or]: [
-                    {
-                        createdAt: {
-                            [Op.lt]: cursor.createdAt,
+            whereAnd.push(
+                {
+                    [Op.or]: [
+                        {
+                            createdAt: {
+                                [Op.lt]: cursor.createdAt,
+                            },
                         },
-                    },
-                    {
-                        [Op.and]: [
-                            {
-                                createdAt: cursor.createdAt,
-                            },
-                            {
-                                id: {
-                                    [Op.lt]: cursor.id,
+                        {
+                            [Op.and]: [
+                                {
+                                    createdAt: cursor.createdAt,
                                 },
-                            },
-                        ]
-                    },
-                ]
-            };
+                                {
+                                    id: {
+                                        [Op.lt]: cursor.id,
+                                    },
+                                },
+                            ]
+                        },
+                    ]
+                }
+            );
         }
 
         const results = await Category.findAll({
-            where: where,
+            where: {
+                [Op.and]: whereAnd,
+            },
             order: [
                 ['createdAt', 'DESC'],
                 ['id', 'DESC'],
@@ -133,12 +139,14 @@ router.get('/:id', async function (req: Request, res: Response, next: NextFuncti
 
 router.get('/:id/histories', adminRequiredMiddleware, async function (req: Request, res: Response, next: NextFunction) {
     try {
-        let where: WhereOptions<CategoryHistoryAttributes> = {
+        let whereAnd: any[] = [{
             id: req.params.id,
-        };
+        }];
 
         const count = await CategoryHistory.count({
-            where: where,
+            where: {
+                [Op.and]: whereAnd,
+            },
         });
 
         const cursorQuery = req.query.cursor as string;
@@ -151,16 +159,19 @@ router.get('/:id/histories', adminRequiredMiddleware, async function (req: Reque
                 },
             );
 
-            where = {
-                ...where,
-                historyId: {
-                    [Op.lt]: cursor.historyId,
-                },
-            };
+            whereAnd.push(
+                {
+                    historyId: {
+                        [Op.lt]: cursor.historyId,
+                    }
+                }
+            );
         }
 
         const results = await CategoryHistory.findAll({
-            where: where,
+            where: {
+                [Op.and]: whereAnd,
+            },
             order: [
                 ['historyId', 'DESC'],
             ],

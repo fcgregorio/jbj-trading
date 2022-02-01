@@ -27,6 +27,7 @@ import {
     Tooltip,
     Typography,
 } from '@mui/material';
+import { red } from '@mui/material/colors';
 import SaveIcon from '@mui/icons-material/Save';
 import LoadingButton from '@mui/lab/LoadingButton';
 import { DateTimePicker, DesktopDatePicker } from '@mui/lab';
@@ -37,11 +38,14 @@ import {
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
 import { Android12Switch } from '../Switch';
+import { useSnackbar } from 'notistack';
+import { useAsyncEffect } from 'use-async-effect';
 
 export default function Edit() {
     const navigate = useNavigate();
     const location = useLocation();
     const params = useParams();
+    const { enqueueSnackbar, closeSnackbar } = useSnackbar();
 
     const [loading, setLoading] = React.useState(false);
     const [locked, setLocked] = React.useState(false);
@@ -73,71 +77,79 @@ export default function Edit() {
                 .required('Required'),
         }),
         onSubmit: async values => {
-            try {
-                setLocked(true);
-
-                await axios.put<
-                    { id: string; },
-                    AxiosResponse<{ id: string; }>,
-                    ApiEditInTransaction
-                >(
-                    `/api${location.pathname}/..`,
-                    {
-                        supplier: values.supplier,
-                        deliveryReceipt: values.deliveryReceipt,
-                        dateOfDeliveryReceipt: values.dateOfDeliveryReceipt !== null && values.dateOfDeliveryReceipt.isValid ? values.dateOfDeliveryReceipt : null,
-                        dateReceived: values.dateReceived !== null && values.dateReceived.isValid ? values.dateReceived : null,
-                        void: values.void,
-                    },
-                )
-                    .then(result => result.data);
-
-                navigate(`../${params.inTransactionID}`, { replace: true });
-            } catch (error) {
-
-            } finally {
-                setLocked(false);
-            }
+            setLocked(true);
+            await axios.put<
+                { id: string; },
+                AxiosResponse<{ id: string; }>,
+                ApiEditInTransaction
+            >(
+                `/api${location.pathname}/..`,
+                {
+                    supplier: values.supplier,
+                    deliveryReceipt: values.deliveryReceipt,
+                    dateOfDeliveryReceipt: values.dateOfDeliveryReceipt !== null && values.dateOfDeliveryReceipt.isValid ? values.dateOfDeliveryReceipt : null,
+                    dateReceived: values.dateReceived !== null && values.dateReceived.isValid ? values.dateReceived : null,
+                    void: values.void,
+                },
+            )
+                .then(result => result.data)
+                .then(result => {
+                    navigate(`../${params.inTransactionID}`, { replace: true });
+                    enqueueSnackbar('Edit in-transation successful', { variant: 'success' });
+                })
+                .catch(error => {
+                    enqueueSnackbar('Edit in-transaction failed', { variant: 'error' });
+                    if (error.response) {
+                        const data = error.response.data;
+                        for (const e of data.errors) {
+                            formik.setFieldError(e.path, e.message);
+                        }
+                    }
+                })
+                .finally(() => {
+                    setLocked(false);
+                });
         },
     });
 
-    React.useEffect(() => {
+    useAsyncEffect(async isActive => {
         setLoading(true);
-        axios.get<InTransaction>(`/api${location.pathname}/..`)
+        await axios.get<InTransaction>(`/api${location.pathname}/..`)
             .then(result => result.data)
             .then(result => {
-                    formik.setFieldValue('supplier', result.supplier);
-                    formik.setFieldValue('deliveryReceipt', result.deliveryReceipt);
-                    formik.setFieldValue('dateOfDeliveryReceipt', result.dateOfDeliveryReceipt !== null ? DateTime.fromISO(result.dateOfDeliveryReceipt.toString()) : null);
-                    formik.setFieldValue('dateReceived', result.dateReceived !== null ? DateTime.fromISO(result.dateReceived.toString()) : null);
-                    formik.setFieldValue('void', result.void);
-                    formik.setFieldValue('disableVoid', result.void);
-                    formik.setFieldValue('createdAt', result.createdAt);
-                    formik.setFieldValue('updatedAt', result.updatedAt);
-                    formik.setFieldValue('InTransfers', result.InTransfers);
-                }
-            )
+                formik.setFieldValue('supplier', result.supplier);
+                formik.setFieldValue('deliveryReceipt', result.deliveryReceipt);
+                formik.setFieldValue('dateOfDeliveryReceipt', result.dateOfDeliveryReceipt !== null ? DateTime.fromISO(result.dateOfDeliveryReceipt.toString()) : null);
+                formik.setFieldValue('dateReceived', result.dateReceived !== null ? DateTime.fromISO(result.dateReceived.toString()) : null);
+                formik.setFieldValue('void', result.void);
+                formik.setFieldValue('disableVoid', result.void);
+                formik.setFieldValue('createdAt', result.createdAt);
+                formik.setFieldValue('updatedAt', result.updatedAt);
+                formik.setFieldValue('InTransfers', result.InTransfers);
+            })
+            .catch(error => {
+                enqueueSnackbar('Error loading data', { variant: 'error' });
+            })
             .finally(() => {
                 setLoading(false);
             });
     }, [location.pathname]);
 
     return (
-        <Box>
+        <Stack
+            sx={{
+                boxSizing: 'border-box',
+                flex: '1 1 auto',
+            }}
+        >
             {loading ?
                 <LinearProgress />
                 :
-                <Stack
-                    spacing={2}
-                    sx={{
-                        marginY: 2
-                    }}
-                >
+                <React.Fragment>
                     <Box
                         sx={{
                             display: 'flex',
-                            justifyContent: 'flex-start',
-                            marginX: 2,
+                            padding: 2,
                         }}
                     >
                         <Stack direction="row" spacing={2}>
@@ -306,75 +318,95 @@ export default function Edit() {
                                     />
                                 }
                             />
-                            <Paper
-                                variant='outlined'
-                                sx={{
-                                    borderColor: 'rgba(0, 0, 0, 0.42)',
-                                    borderStyle: 'dotted',
-                                }}
-                            >
-                                <Toolbar
-                                    disableGutters
+                            <Stack>
+                                <Paper
+                                    variant='outlined'
                                     sx={{
-                                        px: '12px',
-                                        backgroundColor: 'rgba(0, 0, 0, 0.12)',
+                                        borderColor: 'rgba(0, 0, 0, 0.42)',
+                                        borderStyle: 'dotted',
                                     }}
                                 >
+                                    <Toolbar
+                                        disableGutters
+                                        sx={{
+                                            px: '12px',
+                                            backgroundColor: 'rgba(0, 0, 0, 0.12)',
+                                        }}
+                                    >
+                                        <Typography
+                                            sx={{ flex: '1 1 auto' }}
+                                            color="text.disabled"
+                                            variant="subtitle1"
+                                            component="div"
+                                        >
+                                            In-Transfers
+                                        </Typography>
+                                    </Toolbar>
+                                    <TableContainer>
+                                        <Table size="small" >
+                                            <TableHead>
+                                                <TableRow>
+                                                    <TableCell>Item ID</TableCell>
+                                                    <TableCell>Item Name</TableCell>
+                                                    <TableCell align="right">Quantity</TableCell>
+                                                    <TableCell>Item Unit</TableCell>
+                                                </TableRow>
+                                            </TableHead>
+                                            <TableBody>
+                                                {formik.values.InTransfers.map((row: InTransfer) => (
+                                                    <TableRow
+                                                        key={row.item}
+                                                        sx={{ '&:last-child td, &:last-child th': { border: 0 } }}>
+                                                        <TableCell>
+                                                            <Tooltip title={row.item} placement="right">
+                                                                <Link
+                                                                    underline="none"
+                                                                    component={RouterLink}
+                                                                    to={`/items/${row.item}`}
+                                                                    color={'text.primary'}
+                                                                >
+                                                                    <Typography
+                                                                        fontFamily='monospace'
+                                                                        variant='body2'
+                                                                    >
+                                                                        {row.item.substring(0, 8)}
+                                                                    </Typography>
+                                                                </Link>
+                                                            </Tooltip>
+                                                        </TableCell>
+                                                        <TableCell>{row.Item!.name}</TableCell>
+                                                        <TableCell align="right">
+                                                            <Typography
+                                                                fontFamily='monospace'
+                                                                variant='body2'
+                                                            >
+                                                                {row.quantity}
+                                                            </Typography>
+                                                        </TableCell>
+                                                        <TableCell>{row.Item!.Unit.name}</TableCell>
+                                                    </TableRow>
+                                                ))}
+                                            </TableBody>
+                                        </Table>
+                                    </TableContainer>
+                                </Paper>
+                                {
+                                    formik.touched.InTransfers && Boolean(formik.errors.InTransfers)
+                                    &&
                                     <Typography
-                                        sx={{ flex: '1 1 auto' }}
-                                        color="text.disabled"
-                                        variant="subtitle1"
+                                        sx={{ flex: '1 1 auto', mx: '14px', mt: '3px' }}
+                                        color={red[700]}
+                                        variant="caption"
                                         component="div"
                                     >
-                                        In-Transfers
+                                        {formik.errors.InTransfers}
                                     </Typography>
-                                </Toolbar>
-                                <TableContainer>
-                                    <Table sx={{ minWidth: 650 }} size="small" >
-                                        <TableHead>
-                                            <TableRow>
-                                                <TableCell>Item ID</TableCell>
-                                                <TableCell>Item Name</TableCell>
-                                                <TableCell align="right">Quantity</TableCell>
-                                                <TableCell>Item Unit</TableCell>
-                                            </TableRow>
-                                        </TableHead>
-                                        <TableBody>
-                                            {formik.values.InTransfers.map((row: InTransfer) => (
-                                                <TableRow
-                                                    key={row.item}
-                                                    sx={{ '&:last-child td, &:last-child th': { border: 0 } }}>
-                                                    <TableCell>
-                                                        <Tooltip title={row.item} placement="right">
-                                                            <Link
-                                                                underline="none"
-                                                                component={RouterLink}
-                                                                to={`/items/${row.item}`}
-                                                                color={'text.primary'}
-                                                            >
-                                                                <Typography fontFamily='monospace'>
-                                                                    {row.item.substring(0, 8)}
-                                                                </Typography>
-                                                            </Link>
-                                                        </Tooltip>
-                                                    </TableCell>
-                                                    <TableCell>{row.Item!.name}</TableCell>
-                                                    <TableCell align="right">
-                                                        <Typography fontFamily='monospace'>
-                                                            {row.quantity}
-                                                        </Typography>
-                                                    </TableCell>
-                                                    <TableCell>{row.Item!.Unit.name}</TableCell>
-                                                </TableRow>
-                                            ))}
-                                        </TableBody>
-                                    </Table>
-                                </TableContainer>
-                            </Paper>
+                                }
+                            </Stack>
                         </Stack>
                     }
-                </Stack>
+                </React.Fragment>
             }
-        </Box >
+        </Stack>
     );
-}
+};

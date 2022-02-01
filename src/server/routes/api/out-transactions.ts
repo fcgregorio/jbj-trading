@@ -1,8 +1,9 @@
 import { NextFunction, Request, Response, Router } from 'express';
 import sequelize, { Item, OutTransaction, OutTransactionAttributes, OutTransactionHistory, OutTransactionHistoryAttributes, OutTransfer, Transaction, Transfer, Unit } from '../../sequelize';
 import { loginRequiredMiddleware, adminRequiredMiddleware } from '../../middleware/auth';
-import { Op, QueryTypes, ValidationError, WhereOptions } from 'sequelize';
+import { EmptyResultError, Op, QueryTypes, ValidationError, ValidationErrorItem, WhereOptions } from 'sequelize';
 import { DateTime } from 'luxon';
+import * as _ from 'lodash';
 
 const router = Router();
 router.use(loginRequiredMiddleware);
@@ -37,24 +38,77 @@ router.post('/', async function (req: Request, res: Response, next: NextFunction
             );
 
             if (req.body.outTransfers.length == 0) {
-                throw new ValidationError('Out-Transfers cannot be empty.');
+                throw new ValidationError(
+                    'ValidationError',
+                    [
+                        new ValidationErrorItem(
+                            'Out-Transfers cannot be empty',
+                            undefined,
+                            'OutTransfers',
+                        ),
+                    ],
+                );
             }
 
-            req.body.outTransfers.reverse();
             for (const element of req.body.outTransfers) {
-                const outTransfer = await OutTransfer.create(
-                    {
-                        transaction: outTransaction.id,
-                        item: element.item,
-                        quantity: element.quantity,
-                        createdAt: outTransaction.createdAt,
-                        updatedAt: outTransaction.updatedAt,
-                    },
-                    {
-                        transaction: t,
-                        silent: true,
-                    },
-                );
+                let item = undefined;
+                try {
+                    item = await Item.findByPk(
+                        element.item,
+                        {
+                            rejectOnEmpty: true,
+                            transaction: t,
+                            lock: t.LOCK.UPDATE,
+                        },
+                    );
+                } catch (error) {
+                    if (error instanceof EmptyResultError) {
+                        throw new ValidationError(
+                            error.message,
+                            [
+                                new ValidationErrorItem(
+                                    `${element.item.slice(0, 8)}: Item ID: Does not exist`,
+                                    undefined,
+                                    'OutTransfers',
+                                ),
+                            ],
+                        );
+                    } else {
+                        throw error;
+                    }
+                }
+
+                let outTransfer = undefined;
+                try {
+                    outTransfer = await OutTransfer.create(
+                        {
+                            transaction: outTransaction.id,
+                            item: element.item,
+                            quantity: element.quantity,
+                            createdAt: outTransaction.createdAt,
+                            updatedAt: outTransaction.updatedAt,
+                        },
+                        {
+                            transaction: t,
+                            silent: true,
+                        },
+                    );
+                } catch (error) {
+                    if (error instanceof ValidationError) {
+                        throw new ValidationError(
+                            error.message,
+                            error.errors.map(item => {
+                                return new ValidationErrorItem(
+                                    `${element.item.slice(0, 8)}: ${_.startCase(item.path!)}: ${item.message}`,
+                                    undefined,
+                                    'OutTransfers',
+                                );
+                            }),
+                        );
+                    } else {
+                        throw error;
+                    }
+                }
 
                 await Transfer.create(
                     {
@@ -66,15 +120,6 @@ router.post('/', async function (req: Request, res: Response, next: NextFunction
                     {
                         transaction: t,
                         silent: true,
-                    },
-                );
-
-                let item = await Item.findByPk(
-                    element.item,
-                    {
-                        rejectOnEmpty: true,
-                        transaction: t,
-                        lock: t.LOCK.UPDATE,
                     },
                 );
 
@@ -96,13 +141,30 @@ router.post('/', async function (req: Request, res: Response, next: NextFunction
                 });
 
                 item.stock = item.stock - element.quantity;
-                await item.save(
-                    {
-                        transaction: t,
-                        silent: true,
-                        user: res.locals.user,
-                    },
-                );
+                try {
+                    await item.save(
+                        {
+                            transaction: t,
+                            silent: true,
+                            user: res.locals.user,
+                        },
+                    );
+                } catch (error) {
+                    if (error instanceof ValidationError) {
+                        throw new ValidationError(
+                            error.message,
+                            error.errors.map(item => {
+                                return new ValidationErrorItem(
+                                    `${element.item.slice(0, 8)}: ${_.startCase(item.path!)}: ${item.message === 'Must be non-negative' ? 'Not enough available' : item.message}`,
+                                    undefined,
+                                    'OutTransfers'
+                                );
+                            }),
+                        );
+                    } else {
+                        throw error;
+                    }
+                }
             }
 
             return outTransaction;
@@ -116,7 +178,7 @@ router.post('/', async function (req: Request, res: Response, next: NextFunction
 
 router.get('/', async function (req: Request, res: Response, next: NextFunction) {
     try {
-        let where: WhereOptions<OutTransactionAttributes> = {};
+        let whereAnd: any[] = [];
 
         const dateQuery = req.query.date as string;
         if (dateQuery !== undefined) {
@@ -125,29 +187,33 @@ router.get('/', async function (req: Request, res: Response, next: NextFunction)
                 res.status(400).send('Invalid date');
                 return;
             } else {
-                where = {
-                    ...where,
-                    createdAt: {
-                        [Op.gte]: date.startOf('day').toJSDate(),
-                        [Op.lte]: date.endOf('day').toJSDate(),
-                    },
-                };
+                whereAnd.push(
+                    {
+                        createdAt: {
+                            [Op.gte]: date.startOf('day').toJSDate(),
+                            [Op.lte]: date.endOf('day').toJSDate(),
+                        },
+                    }
+                );
             }
         }
 
         const searchQuery = req.query.search as string;
         if (searchQuery !== undefined && searchQuery !== '') {
-            where = {
-                ...where,
-                customer: {
-                    [Op.like]: '%' + searchQuery + '%', // TODO
-                },
-            };
+            whereAnd.push(
+                {
+                    customer: {
+                        [Op.like]: `%${searchQuery}%`, // TODO
+                    },
+                }
+            );
 
         }
 
         const count = await OutTransaction.count({
-            where: where,
+            where: {
+                [Op.and]: whereAnd,
+            },
         });
 
         const cursorQuery = req.query.cursor as string;
@@ -160,28 +226,29 @@ router.get('/', async function (req: Request, res: Response, next: NextFunction)
                 },
             );
 
-            where = {
-                ...where,
-                [Op.or]: [
-                    {
-                        createdAt: {
-                            [Op.lt]: cursor.createdAt,
+            whereAnd.push(
+                {
+                    [Op.or]: [
+                        {
+                            createdAt: {
+                                [Op.lt]: cursor.createdAt,
+                            },
                         },
-                    },
-                    {
-                        [Op.and]: [
-                            {
-                                createdAt: cursor.createdAt,
-                            },
-                            {
-                                id: {
-                                    [Op.lt]: cursor.id,
+                        {
+                            [Op.and]: [
+                                {
+                                    createdAt: cursor.createdAt,
                                 },
-                            },
-                        ]
-                    },
-                ]
-            };
+                                {
+                                    id: {
+                                        [Op.lt]: cursor.id,
+                                    },
+                                },
+                            ]
+                        },
+                    ]
+                }
+            );
         }
 
         const results = await OutTransaction.findAll({
@@ -209,7 +276,9 @@ router.get('/', async function (req: Request, res: Response, next: NextFunction)
                     ],
                 },
             ],
-            where: where,
+            where: {
+                [Op.and]: whereAnd,
+            },
             order: [
                 ['createdAt', 'DESC'],
                 ['id', 'DESC'],
@@ -267,12 +336,17 @@ router.get('/:id', async function (req: Request, res: Response, next: NextFuncti
 
 router.get('/:id/histories', adminRequiredMiddleware, async function (req: Request, res: Response, next: NextFunction) {
     try {
-        let where: WhereOptions<OutTransactionHistoryAttributes> = {
-            id: req.params.id,
-        };
+        let whereAnd: any[] = [];
+        whereAnd.push(
+            {
+                id: req.params.id,
+            }
+        );
 
         const count = await OutTransactionHistory.count({
-            where: where,
+            where: {
+                [Op.and]: whereAnd,
+            },
         });
 
         const cursorQuery = req.query.cursor as string;
@@ -285,16 +359,19 @@ router.get('/:id/histories', adminRequiredMiddleware, async function (req: Reque
                 },
             );
 
-            where = {
-                ...where,
-                historyId: {
-                    [Op.lt]: cursor.historyId,
-                },
-            };
+            whereAnd.push(
+                {
+                    historyId: {
+                        [Op.lt]: cursor.historyId,
+                    },
+                }
+            );
         }
 
         const results = await OutTransactionHistory.findAll({
-            where: where,
+            where: {
+                [Op.and]: whereAnd,
+            },
             order: [
                 ['historyId', 'DESC'],
             ],
@@ -324,7 +401,16 @@ router.put('/:id', adminRequiredMiddleware, async function (req: Request, res: R
             );
 
             if (outTransaction.void && !req.body.void) {
-                throw new ValidationError('Out-Transaction already void.');
+                throw new ValidationError(
+                    'ValidationError',
+                    [
+                        new ValidationErrorItem(
+                            'Out-Transaction already void',
+                            undefined,
+                            'void',
+                        ),
+                    ],
+                );
             }
 
             let voided = false;
@@ -364,6 +450,33 @@ router.put('/:id', adminRequiredMiddleware, async function (req: Request, res: R
 
             if (voided) {
                 for (const outTransfer of outTransaction.OutTransfers!) {
+                    let item = undefined;
+                    try {
+                        item = await Item.findByPk(
+                            outTransfer.item,
+                            {
+                                rejectOnEmpty: true,
+                                transaction: t,
+                                lock: t.LOCK.UPDATE,
+                            },
+                        );
+                    } catch (error) {
+                        if (error instanceof EmptyResultError) {
+                            throw new ValidationError(
+                                error.message,
+                                [
+                                    new ValidationErrorItem(`${outTransfer.item.slice(0, 8)}: Item ID: Does not exist`,
+                                        undefined,
+                                        'OutTransfers',
+                                    ),
+                                ],
+                            );
+                        } else {
+                            throw error;
+                        }
+                    }
+
+
                     await sequelize.query(
                         'UPDATE out_transfers SET updatedAt = :updatedAt WHERE id = :id',
                         {
@@ -378,7 +491,7 @@ router.put('/:id', adminRequiredMiddleware, async function (req: Request, res: R
 
                     const transfer = await Transfer.findOne({
                         where: {
-                            inTransfer: outTransfer.id,
+                            outTransfer: outTransfer.id,
                         },
                         rejectOnEmpty: true,
                         transaction: t,
@@ -394,15 +507,6 @@ router.put('/:id', adminRequiredMiddleware, async function (req: Request, res: R
                             },
                             type: QueryTypes.UPDATE,
                             transaction: t,
-                        },
-                    );
-
-                    let item = await Item.findByPk(
-                        outTransfer.item,
-                        {
-                            rejectOnEmpty: true,
-                            transaction: t,
-                            lock: t.LOCK.UPDATE,
                         },
                     );
 
@@ -424,13 +528,30 @@ router.put('/:id', adminRequiredMiddleware, async function (req: Request, res: R
                     });
 
                     item.stock = item.stock + outTransfer.quantity;
-                    await item.save(
-                        {
-                            transaction: t,
-                            silent: true,
-                            user: res.locals.user,
-                        },
-                    );
+                    try {
+                        await item.save(
+                            {
+                                transaction: t,
+                                silent: true,
+                                user: res.locals.user,
+                            },
+                        );
+                    } catch (error) {
+                        if (error instanceof ValidationError) {
+                            throw new ValidationError(
+                                error.message,
+                                error.errors.map(item => {
+                                    return new ValidationErrorItem(
+                                        `${outTransfer.item.slice(0, 8)}: ${_.startCase(item.path!)}: ${item.message === 'Must be non-negative' ? 'Not enough available' : item.message}`,
+                                        undefined,
+                                        'OutTransfers'
+                                    );
+                                }),
+                            );
+                        } else {
+                            throw error;
+                        }
+                    }
                 }
             }
 

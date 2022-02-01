@@ -5,6 +5,7 @@ import {
 import Index from './Index';
 
 export interface Transfer {
+    id: string;
     type: string;
     item: string;
     transaction: string;

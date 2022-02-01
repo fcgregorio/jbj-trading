@@ -1,15 +1,7 @@
-import {
-    Add as AddIcon,
-    Search as SearchIcon
-} from '@mui/icons-material';
+import { Refresh as RefreshIcon } from '@mui/icons-material';
 import {
     Box,
-    Button,
-    Divider,
-    FormControlLabel,
-    FormGroup,
-    InputAdornment,
-    LinearProgress,
+    Button, LinearProgress,
     Link,
     Stack,
     Table,
@@ -17,9 +9,7 @@ import {
     TableCell,
     TableContainer,
     TableHead,
-    TableRow,
-    TextField,
-    Tooltip,
+    TableRow, Tooltip,
     Typography
 } from '@mui/material';
 import axios, {
@@ -29,9 +19,6 @@ import axios, {
 import {
     debounce
 } from 'lodash';
-import {
-    DateTime
-} from 'luxon';
 import { useSnackbar } from 'notistack';
 import * as React from 'react';
 import {
@@ -39,52 +26,45 @@ import {
     resolvePath, useLocation, useNavigate
 } from "react-router-dom";
 import { AuthContext } from '../Context';
-import { FilterMenu } from '../FilterMenu';
-import { Android12Switch } from '../Switch';
 import {
-    Category
-} from './Categories';
+    Item
+} from '../items/Items';
 
-export default function Index() {
+export default () => {
     const navigate = useNavigate();
     const location = useLocation();
     const { enqueueSnackbar, closeSnackbar } = useSnackbar();
 
     const [authContext,] = React.useContext(AuthContext);
 
-    const [search, setSearch] = React.useState<string>('');
-    const [filterMenuShowDeleted, setFilterMenuShowDeleted] = React.useState<boolean>(false);
     const [cursor, setCursor] = React.useState<string | null>(null);
 
     const [loading, setLoading] = React.useState(false);
     const cancelTokenSourceRef = React.useRef<CancelTokenSource | null>(null);
 
     const [count, setCount] = React.useState<number | null>(null);
-    const [categories, setCategories] = React.useState<Category[]>([]);
+    const [items, setItems] = React.useState<Item[]>([]);
 
-    const queryCategories = React.useMemo(
+    const [click, setClick] = React.useState<boolean>(false);
+
+    function handleRefresh() {
+        setClick(!click);
+    }
+
+    const queryItems = React.useMemo(
         () =>
             debounce(
                 async (
-                    request: {
-                        search: string;
-                        filters: {
-                            showDeleted: boolean;
-                        },
-                    },
                     startCallback: () => void,
-                    callback: (results: { count: number; results: Category[]; }) => void,
+                    callback: (results: { count: number; results: Item[]; }) => void,
                     errorCallback: () => void,
                     finallyCallback: () => void,
                     cancelToken: CancelToken,
                 ) => {
                     startCallback();
-                    await axios.get<
-                        { count: number; results: Category[]; }
-                    >(
-                        `/api${location.pathname}`,
+                    await axios.get<{ count: number; results: Item[]; }>(
+                        `/api/items/alerts`,
                         {
-                            params: request,
                             cancelToken: cancelToken,
                         })
                         .then(result => result.data)
@@ -101,7 +81,7 @@ export default function Index() {
                 },
                 200,
             ),
-        [location.pathname],
+        [],
     );
 
     React.useEffect(() => {
@@ -111,21 +91,15 @@ export default function Index() {
         }
 
         const cancelTokenSource = axios.CancelToken.source();
-        queryCategories(
-            {
-                search: search,
-                filters: {
-                    showDeleted: filterMenuShowDeleted,
-                },
-            },
+        queryItems(
             () => {
                 setCount(null);
-                setCategories([]);
+                setItems([]);
                 setLoading(true);
             },
-            data => {
+            (data: { count: number; results: Item[]; }) => {
                 setCount(data.count);
-                setCategories(data.results);
+                setItems(data.results);
                 if (data.results.length === data.count) {
                     setCursor(null);
                 } else if (data.results.length !== 0) {
@@ -140,28 +114,23 @@ export default function Index() {
             () => {
                 setLoading(false);
             },
-            cancelTokenSource.token
-        );
+            cancelTokenSource.token);
 
         return () => {
             cancelTokenSource.cancel();
         };
-    }, [queryCategories, search, filterMenuShowDeleted]);
+    }, [queryItems, click]);
 
     async function handleLoadMoreClick() {
         setLoading(true);
         const source = axios.CancelToken.source();
         cancelTokenSourceRef.current = source;
         await axios.get<
-            { count: number; results: Category[]; }
+            { count: number; results: Item[]; }
         >(
-            `/api${location.pathname}`,
+            `/api/items/alerts`,
             {
                 params: {
-                    search: search,
-                    filters: {
-                        showDeleted: filterMenuShowDeleted,
-                    },
                     cursor: cursor,
                 },
                 cancelToken: source.token,
@@ -169,9 +138,9 @@ export default function Index() {
             .then(result => result.data)
             .then(data => {
                 setCount(data.count);
-                const newCategories = [...categories, ...data.results];
-                setCategories(newCategories);
-                if (newCategories.length === data.count) {
+                const newItems = [...items, ...data.results];
+                setItems(newItems);
+                if (newItems.length === data.count) {
                     setCursor(null);
                 } else if (data.results.length !== 0) {
                     setCursor(data.results[data.results.length - 1].id);
@@ -201,63 +170,22 @@ export default function Index() {
                     padding: 2,
                 }}
             >
-                <Stack direction="row" spacing={2}>
-                    <TextField
-                        sx={{ width: 250 }}
-                        size="small"
-                        label="Search"
-                        value={search}
-                        onChange={(event) => { setSearch(event.target.value); }}
-                        InputProps={{
-                            type: 'search',
-                            startAdornment: (
-                                <InputAdornment position="start">
-                                    <SearchIcon />
-                                </InputAdornment>
-                            ),
-                        }}
-                    />
-                    {
-                        authContext?.user.admin &&
-                        <FilterMenu
-                            highlighted={Boolean(filterMenuShowDeleted)}
+                <Stack
+                    direction="row"
+                    spacing={2}
+                >
+                    <Box
+                        display="flex"
+                        justifyContent="center"
+                        alignItems="center"
+                    >
+                        <Typography
+                            variant="subtitle1"
+                            component="div"
                         >
-                            <Stack
-                                spacing={2}
-                                sx={{
-                                    paddingX: 2,
-                                    paddingY: 2,
-                                }}
-                            >
-                                <Typography
-                                    sx={{
-                                        flex: '1 1 auto',
-                                        userSelect: 'none',
-                                    }}
-                                    color="inherit"
-                                    variant="subtitle1"
-                                    component="div"
-                                >
-                                    Filters
-                                </Typography>
-                                <Divider />
-                                <FormGroup>
-                                    <FormControlLabel
-                                        label="Show Deleted"
-                                        sx={{
-                                            userSelect: 'none',
-                                        }}
-                                        control={
-                                            <Android12Switch
-                                                checked={filterMenuShowDeleted}
-                                                onChange={(event) => { setFilterMenuShowDeleted(event.target.checked); }}
-                                            />
-                                        }
-                                    />
-                                </FormGroup>
-                            </Stack>
-                        </FilterMenu>
-                    }
+                            Item Alerts
+                        </Typography>
+                    </Box>
                 </Stack>
                 <Stack
                     direction="row"
@@ -268,17 +196,16 @@ export default function Index() {
                         authContext?.user.admin &&
                         <Box>
                             <Button
-                                startIcon={<AddIcon />}
+                                startIcon={<RefreshIcon />}
                                 variant="contained"
-                                component={RouterLink}
-                                to={`create`}
+                                onClick={handleRefresh}
                             >
-                                Add
+                                Refresh
                             </Button>
                         </Box>
                     }
                 </Stack>
-            </Box >
+            </Box>
             <TableContainer
                 sx={{
                     flex: '1 1 auto',
@@ -294,19 +221,17 @@ export default function Index() {
                         <TableRow>
                             <TableCell>ID</TableCell>
                             <TableCell>Name</TableCell>
-                            <TableCell align="right">Created At</TableCell>
-                            <TableCell align="right">Updated At</TableCell>
-                            {
-                                filterMenuShowDeleted &&
-                                <TableCell align="right">Deleted At</TableCell>
-                            }
+                            <TableCell align="right">Stock</TableCell>
+                            <TableCell align="right">Safety Stock</TableCell>
+                            <TableCell>Unit</TableCell>
+                            <TableCell>Category</TableCell>
                         </TableRow>
                     </TableHead>
                     <TableBody>
                         {count !== null &&
                             <TableRow>
                                 <TableCell
-                                    colSpan={4 + (filterMenuShowDeleted ? 1 : 0)}
+                                    colSpan={6}
                                     align='right'
                                     sx={{ background: 'rgba(0, 0, 0, 0.06)' }}
                                 >
@@ -319,7 +244,7 @@ export default function Index() {
                                 </TableCell>
                             </TableRow>
                         }
-                        {categories.map((row: any) => (
+                        {items.map((row: any) => (
                             <TableRow
                                 key={row.name}
                                 sx={{ '&:last-child td, &:last-child th': { border: 0 } }}>
@@ -328,7 +253,7 @@ export default function Index() {
                                         <Link
                                             underline="none"
                                             component={RouterLink}
-                                            to={row.id}
+                                            to={`/items/${row.id}`}
                                             color={'text.primary'}
                                         >
                                             <Typography
@@ -341,12 +266,24 @@ export default function Index() {
                                     </Tooltip>
                                 </TableCell>
                                 <TableCell>{row.name}</TableCell>
-                                <TableCell align="right">{DateTime.fromISO(row.createdAt).toLocal().toLocaleString(DateTime.DATETIME_SHORT)}</TableCell>
-                                <TableCell align="right">{DateTime.fromISO(row.updatedAt).toLocal().toLocaleString(DateTime.DATETIME_SHORT)}</TableCell>
-                                {
-                                    filterMenuShowDeleted &&
-                                    <TableCell align="right">{row.deletedAt !== null ? DateTime.fromISO(row.deletedAt).toLocal().toLocaleString(DateTime.DATETIME_SHORT) : null}</TableCell>
-                                }
+                                <TableCell align="right">
+                                    <Typography
+                                        fontFamily='monospace'
+                                        variant='body2'
+                                    >
+                                        {row.stock}
+                                    </Typography>
+                                </TableCell>
+                                <TableCell align="right">
+                                    <Typography
+                                        fontFamily='monospace'
+                                        variant='body2'
+                                    >
+                                        {row.safetyStock}
+                                    </Typography>
+                                </TableCell>
+                                <TableCell>{row.Unit.name}</TableCell>
+                                <TableCell>{row.Category.name}</TableCell>
                             </TableRow>
                         ))}
                         {loading || (cursor &&
@@ -355,7 +292,7 @@ export default function Index() {
                                 sx={{ cursor: 'pointer' }}
                             >
                                 <TableCell
-                                    colSpan={4 + (filterMenuShowDeleted ? 1 : 0)}
+                                    colSpan={6}
                                     align='center'
                                     sx={{ background: 'rgba(0, 0, 0, 0.06)' }}
                                 >
@@ -369,7 +306,7 @@ export default function Index() {
                         )}
                         {loading &&
                             <TableRow>
-                                <TableCell colSpan={4 + (filterMenuShowDeleted ? 1 : 0)} padding='none'>
+                                <TableCell colSpan={6} padding='none'>
                                     <LinearProgress />
                                 </TableCell>
                             </TableRow>
@@ -377,6 +314,6 @@ export default function Index() {
                     </TableBody>
                 </Table>
             </TableContainer>
-        </Stack >
+        </Stack>
     );
 };

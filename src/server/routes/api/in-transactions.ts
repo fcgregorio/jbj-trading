@@ -1,8 +1,9 @@
 import { NextFunction, Request, Response, Router } from 'express';
 import sequelize, { InTransaction, InTransactionAttributes, InTransactionHistory, InTransactionHistoryAttributes, InTransfer, Item, Transaction, Transfer, Unit } from '../../sequelize';
 import { loginRequiredMiddleware, adminRequiredMiddleware } from '../../middleware/auth';
-import { Op, QueryTypes, ValidationError, WhereOptions } from 'sequelize';
+import { EmptyResultError, Op, QueryTypes, ValidationError, ValidationErrorItem, WhereOptions } from 'sequelize';
 import { DateTime } from 'luxon';
+import * as _ from 'lodash';
 
 const router = Router();
 router.use(loginRequiredMiddleware);
@@ -38,24 +39,77 @@ router.post('/', async function (req: Request, res: Response, next: NextFunction
             );
 
             if (req.body.inTransfers.length == 0) {
-                throw new ValidationError('In-Transfers cannot be empty.');
+                throw new ValidationError(
+                    'ValidationError',
+                    [
+                        new ValidationErrorItem(
+                            'In-Transfers cannot be empty',
+                            undefined,
+                            'InTransfers',
+                        ),
+                    ],
+                );
             }
 
-            req.body.inTransfers.reverse();
             for (const element of req.body.inTransfers) {
-                const inTransfer = await InTransfer.create(
-                    {
-                        transaction: inTransaction.id,
-                        item: element.item,
-                        quantity: element.quantity,
-                        createdAt: inTransaction.createdAt,
-                        updatedAt: inTransaction.updatedAt,
-                    },
-                    {
-                        transaction: t,
-                        silent: true,
-                    },
-                );
+                let item = undefined;
+                try {
+                    item = await Item.findByPk(
+                        element.item,
+                        {
+                            rejectOnEmpty: true,
+                            transaction: t,
+                            lock: t.LOCK.UPDATE,
+                        },
+                    );
+                } catch (error) {
+                    if (error instanceof EmptyResultError) {
+                        throw new ValidationError(
+                            error.message,
+                            [
+                                new ValidationErrorItem(
+                                    `${element.item.slice(0, 8)}: Item ID: Does not exist`,
+                                    undefined,
+                                    'InTransfers',
+                                ),
+                            ],
+                        );
+                    } else {
+                        throw error;
+                    }
+                }
+
+                let inTransfer = undefined;
+                try {
+                    inTransfer = await InTransfer.create(
+                        {
+                            transaction: inTransaction.id,
+                            item: element.item,
+                            quantity: element.quantity,
+                            createdAt: inTransaction.createdAt,
+                            updatedAt: inTransaction.updatedAt,
+                        },
+                        {
+                            transaction: t,
+                            silent: true,
+                        },
+                    );
+                } catch (error) {
+                    if (error instanceof ValidationError) {
+                        throw new ValidationError(
+                            error.message,
+                            error.errors.map(item => {
+                                return new ValidationErrorItem(
+                                    `${element.item.slice(0, 8)}: ${_.startCase(item.path!)}: ${item.message}`,
+                                    undefined,
+                                    'InTransfers',
+                                );
+                            }),
+                        );
+                    } else {
+                        throw error;
+                    }
+                }
 
                 await Transfer.create(
                     {
@@ -67,15 +121,6 @@ router.post('/', async function (req: Request, res: Response, next: NextFunction
                     {
                         transaction: t,
                         silent: true,
-                    },
-                );
-
-                let item = await Item.findByPk(
-                    element.item,
-                    {
-                        rejectOnEmpty: true,
-                        transaction: t,
-                        lock: t.LOCK.UPDATE,
                     },
                 );
 
@@ -97,13 +142,30 @@ router.post('/', async function (req: Request, res: Response, next: NextFunction
                 });
 
                 item.stock = item.stock + element.quantity;
-                await item.save(
-                    {
-                        transaction: t,
-                        silent: true,
-                        user: res.locals.user,
-                    },
-                );
+                try {
+                    await item.save(
+                        {
+                            transaction: t,
+                            silent: true,
+                            user: res.locals.user,
+                        },
+                    );
+                } catch (error) {
+                    if (error instanceof ValidationError) {
+                        throw new ValidationError(
+                            error.message,
+                            error.errors.map(item => {
+                                return new ValidationErrorItem(
+                                    `${element.item.slice(0, 8)}: ${_.startCase(item.path!)}: ${item.message === 'Must be non-negative' ? 'Not enough available' : item.message}`,
+                                    undefined,
+                                    'InTransfers'
+                                );
+                            }),
+                        );
+                    } else {
+                        throw error;
+                    }
+                }
             }
 
             return inTransaction;
@@ -117,7 +179,7 @@ router.post('/', async function (req: Request, res: Response, next: NextFunction
 
 router.get('/', async function (req: Request, res: Response, next: NextFunction) {
     try {
-        let where: WhereOptions<InTransactionAttributes> = {};
+        let whereAnd: any[] = [];
 
         const dateQuery = req.query.date as string;
         if (dateQuery !== undefined) {
@@ -126,29 +188,33 @@ router.get('/', async function (req: Request, res: Response, next: NextFunction)
                 res.status(400).send('Invalid date');
                 return;
             } else {
-                where = {
-                    ...where,
-                    createdAt: {
-                        [Op.gte]: date.startOf('day').toJSDate(),
-                        [Op.lte]: date.endOf('day').toJSDate(),
-                    },
-                };
+                whereAnd.push(
+                    {
+                        createdAt: {
+                            [Op.gte]: date.startOf('day').toJSDate(),
+                            [Op.lte]: date.endOf('day').toJSDate(),
+                        },
+                    }
+                );
             }
         }
 
         const searchQuery = req.query.search as string;
         if (searchQuery !== undefined && searchQuery !== '') {
-            where = {
-                ...where,
-                supplier: {
-                    [Op.like]: '%' + searchQuery + '%', // TODO
-                },
-            };
+            whereAnd.push(
+                {
+                    supplier: {
+                        [Op.like]: `%${searchQuery}%`, // TODO
+                    },
+                }
+            );
 
         }
 
         const count = await InTransaction.count({
-            where: where,
+            where: {
+                [Op.and]: whereAnd,
+            },
         });
 
         const cursorQuery = req.query.cursor as string;
@@ -161,28 +227,29 @@ router.get('/', async function (req: Request, res: Response, next: NextFunction)
                 },
             );
 
-            where = {
-                ...where,
-                [Op.or]: [
-                    {
-                        createdAt: {
-                            [Op.lt]: cursor.createdAt,
+            whereAnd.push(
+                {
+                    [Op.or]: [
+                        {
+                            createdAt: {
+                                [Op.lt]: cursor.createdAt,
+                            },
                         },
-                    },
-                    {
-                        [Op.and]: [
-                            {
-                                createdAt: cursor.createdAt,
-                            },
-                            {
-                                id: {
-                                    [Op.lt]: cursor.id,
+                        {
+                            [Op.and]: [
+                                {
+                                    createdAt: cursor.createdAt,
                                 },
-                            },
-                        ]
-                    },
-                ]
-            };
+                                {
+                                    id: {
+                                        [Op.lt]: cursor.id,
+                                    },
+                                },
+                            ]
+                        },
+                    ]
+                }
+            );
         }
 
         const results = await InTransaction.findAll({
@@ -210,7 +277,9 @@ router.get('/', async function (req: Request, res: Response, next: NextFunction)
                     ],
                 },
             ],
-            where: where,
+            where: {
+                [Op.and]: whereAnd,
+            },
             order: [
                 ['createdAt', 'DESC'],
                 ['id', 'DESC'],
@@ -268,12 +337,14 @@ router.get('/:id', async function (req: Request, res: Response, next: NextFuncti
 
 router.get('/:id/histories', adminRequiredMiddleware, async function (req: Request, res: Response, next: NextFunction) {
     try {
-        let where: WhereOptions<InTransactionHistoryAttributes> = {
+        let whereAnd: any[] = [{
             id: req.params.id,
-        };
+        }];
 
         const count = await InTransactionHistory.count({
-            where: where,
+            where: {
+                [Op.and]: whereAnd,
+            },
         });
 
         const cursorQuery = req.query.cursor as string;
@@ -286,16 +357,19 @@ router.get('/:id/histories', adminRequiredMiddleware, async function (req: Reque
                 },
             );
 
-            where = {
-                ...where,
-                historyId: {
-                    [Op.lt]: cursor.historyId,
-                },
-            };
+            whereAnd.push(
+                {
+                    historyId: {
+                        [Op.lt]: cursor.historyId,
+                    },
+                }
+            );
         }
 
         const results = await InTransactionHistory.findAll({
-            where: where,
+            where: {
+                [Op.and]: whereAnd,
+            },
             order: [
                 ['historyId', 'DESC'],
             ],
@@ -325,7 +399,16 @@ router.put('/:id', adminRequiredMiddleware, async function (req: Request, res: R
             );
 
             if (inTransaction.void && !req.body.void) {
-                throw new ValidationError('In-Transaction already void.');
+                throw new ValidationError(
+                    'ValidationError',
+                    [
+                        new ValidationErrorItem(
+                            'In-Transaction already void',
+                            undefined,
+                            'void',
+                        ),
+                    ],
+                );
             }
 
             let voided = false;
@@ -366,6 +449,33 @@ router.put('/:id', adminRequiredMiddleware, async function (req: Request, res: R
 
             if (voided) {
                 for (const inTransfer of inTransaction.InTransfers!) {
+                    let item = undefined;
+                    try {
+                        item = await Item.findByPk(
+                            inTransfer.item,
+                            {
+                                rejectOnEmpty: true,
+                                transaction: t,
+                                lock: t.LOCK.UPDATE,
+                            },
+                        );
+                    } catch (error) {
+                        if (error instanceof EmptyResultError) {
+                            throw new ValidationError(
+                                error.message,
+                                [
+                                    new ValidationErrorItem(
+                                        `${inTransfer.item.slice(0, 8)}: Item ID: Does not exist`,
+                                        undefined,
+                                        'InTransfers',
+                                    ),
+                                ],
+                            );
+                        } else {
+                            throw error;
+                        }
+                    }
+
                     await sequelize.query(
                         'UPDATE in_transfers SET updatedAt = :updatedAt WHERE id = :id',
                         {
@@ -399,15 +509,6 @@ router.put('/:id', adminRequiredMiddleware, async function (req: Request, res: R
                         },
                     );
 
-                    let item = await Item.findByPk(
-                        inTransfer.item,
-                        {
-                            rejectOnEmpty: true,
-                            transaction: t,
-                            lock: t.LOCK.UPDATE,
-                        },
-                    );
-
                     await sequelize.query(
                         'UPDATE items SET updatedAt = :updatedAt WHERE id = :id',
                         {
@@ -426,13 +527,30 @@ router.put('/:id', adminRequiredMiddleware, async function (req: Request, res: R
                     });
 
                     item.stock = item.stock - inTransfer.quantity;
-                    await item.save(
-                        {
-                            transaction: t,
-                            silent: true,
-                            user: res.locals.user,
-                        },
-                    );
+                    try {
+                        await item.save(
+                            {
+                                transaction: t,
+                                silent: true,
+                                user: res.locals.user,
+                            },
+                        );
+                    } catch (error) {
+                        if (error instanceof ValidationError) {
+                            throw new ValidationError(
+                                error.message,
+                                error.errors.map(item => {
+                                    return new ValidationErrorItem(
+                                        `${inTransfer.item.slice(0, 8)}: ${_.startCase(item.path!)}: ${item.message === 'Must be non-negative' ? 'Not enough available' : item.message}`,
+                                        undefined,
+                                        'InTransfers'
+                                    );
+                                }),
+                            );
+                        } else {
+                            throw error;
+                        }
+                    }
                 }
             }
 

@@ -1,5 +1,6 @@
 import {
-    Add as AddIcon
+    Add as AddIcon,
+    Search as SearchIcon
 } from '@mui/icons-material';
 import {
     Box,
@@ -7,6 +8,7 @@ import {
     Divider,
     FormControlLabel,
     FormGroup,
+    InputAdornment,
     LinearProgress,
     Link,
     Stack,
@@ -44,10 +46,12 @@ import { Android12Switch } from '../Switch';
 import {
     Unit
 } from './Units';
+import { useSnackbar } from 'notistack';
 
 export default function Index() {
     const navigate = useNavigate();
     const location = useLocation();
+    const { enqueueSnackbar, closeSnackbar } = useSnackbar();
 
     const [authContext,] = React.useContext(AuthContext);
 
@@ -61,15 +65,10 @@ export default function Index() {
     const [count, setCount] = React.useState<number | null>(null);
     const [units, setUnits] = React.useState<Unit[]>([]);
 
-    function handleCreateUnit() {
-        const newWindow = window.open(resolvePath('create', location.pathname).pathname, '_blank', 'noopener,noreferrer');
-        if (newWindow) newWindow.opener = null;
-    }
-
     const queryUnits = React.useMemo(
         () =>
             debounce(
-                (
+                async (
                     request: {
                         search: string;
                         filters: {
@@ -77,30 +76,31 @@ export default function Index() {
                         },
                     },
                     startCallback: () => void,
-                    callback: (results: any) => void,
+                    callback: (results: { count: number; results: Unit[]; }) => void,
                     errorCallback: () => void,
+                    finallyCallback: () => void,
                     cancelToken: CancelToken,
                 ) => {
                     startCallback();
-                    axios.get<never, AxiosResponse<any>>(
+                    await axios.get<
+                        { count: number; results: Unit[]; }
+                    >(
                         `/api${location.pathname}`,
                         {
                             params: request,
                             cancelToken: cancelToken,
-                        },
-                    )
+                        })
                         .then(result => result.data)
-                        .then(
-                            (data) => {
-                                callback(data);
-                            },
-                            // Note: it's important to handle errors here
-                            // instead of a catch() block so that we don't swallow
-                            // exceptions from actual bugs in components.
-                            (error) => {
-                                errorCallback();
-                            }
-                        );
+                        .then(data => {
+                            callback(data);
+                        })
+                        .catch(error => {
+                            if (axios.isCancel(error)) return;
+                            errorCallback();
+                        })
+                        .finally(() => {
+                            finallyCallback();
+                        });
                 },
                 200,
             ),
@@ -126,7 +126,7 @@ export default function Index() {
                 setUnits([]);
                 setLoading(true);
             },
-            (data: any) => {
+            data => {
                 setCount(data.count);
                 setUnits(data.results);
                 if (data.results.length === data.count) {
@@ -136,23 +136,28 @@ export default function Index() {
                 } else {
                     setCursor(null);
                 }
-                setLoading(false);
+            },
+            () => {
+                enqueueSnackbar('Error loading data', { variant: 'error' });
             },
             () => {
                 setLoading(false);
             },
-            cancelTokenSource.token);
+            cancelTokenSource.token
+        );
 
         return () => {
             cancelTokenSource.cancel();
         };
     }, [queryUnits, search, filterMenuShowDeleted]);
 
-    function handleLoadMoreClick() {
+    async function handleLoadMoreClick() {
         setLoading(true);
         const source = axios.CancelToken.source();
         cancelTokenSourceRef.current = source;
-        axios.get<never, AxiosResponse<any>>(
+        await axios.get<
+            { count: number; results: Unit[]; }
+        >(
             `/api${location.pathname}`,
             {
                 params: {
@@ -163,43 +168,40 @@ export default function Index() {
                     cursor: cursor,
                 },
                 cancelToken: source.token,
-            },
-        )
+            })
             .then(result => result.data)
-            .then(
-                (data) => {
-                    setCount(data.count);
-                    const newUnits = [...units, ...data.results];
-                    setUnits(newUnits);
-                    if (newUnits.length === data.count) {
-                        setCursor(null);
-                    } else if (data.results.length !== 0) {
-                        setCursor(data.results[data.results.length - 1].id);
-                    } else {
-                        setCursor(null);
-                    }
-                    setLoading(false);
-                },
-                // Note: it's important to handle errors here
-                // instead of a catch() block so that we don't swallow
-                // exceptions from actual bugs in components.
-                (error) => {
-                    setLoading(false);
+            .then(data => {
+                setCount(data.count);
+                const newUnits = [...units, ...data.results];
+                setUnits(newUnits);
+                if (newUnits.length === data.count) {
+                    setCursor(null);
+                } else if (data.results.length !== 0) {
+                    setCursor(data.results[data.results.length - 1].id);
+                } else {
+                    setCursor(null);
                 }
-            );
+            })
+            .catch(error => {
+                if (axios.isCancel(error)) return;
+                enqueueSnackbar('Error loading data', { variant: 'error' });
+            })
+            .finally(() => {
+                setLoading(false);
+            });
     }
 
     return (
-        <Stack spacing={2}
+        <Stack
             sx={{
-                marginY: 2
+                boxSizing: 'border-box',
+                flex: '1 1 auto',
             }}
         >
             <Box
                 sx={{
                     display: 'flex',
-                    justifyContent: 'flex-start',
-                    marginX: 2,
+                    padding: 2,
                 }}
             >
                 <Stack direction="row" spacing={2}>
@@ -211,6 +213,11 @@ export default function Index() {
                         onChange={(event) => { setSearch(event.target.value); }}
                         InputProps={{
                             type: 'search',
+                            startAdornment: (
+                                <InputAdornment position="start">
+                                    <SearchIcon />
+                                </InputAdornment>
+                            ),
                         }}
                     />
                     {
@@ -266,7 +273,8 @@ export default function Index() {
                             <Button
                                 startIcon={<AddIcon />}
                                 variant="contained"
-                                onClick={handleCreateUnit}
+                                component={RouterLink}
+                                to={`create`}
                             >
                                 Add
                             </Button>
@@ -274,8 +282,17 @@ export default function Index() {
                     }
                 </Stack>
             </Box>
-            <TableContainer>
-                <Table sx={{ minWidth: 650 }} size="small" >
+            <TableContainer
+                sx={{
+                    flex: '1 1 auto',
+                    overflowY: 'scroll',
+                    minHeight: '360px',
+                }}
+            >
+                <Table
+                    size="small"
+                    stickyHeader
+                >
                     <TableHead>
                         <TableRow>
                             <TableCell>ID</TableCell>
@@ -317,7 +334,10 @@ export default function Index() {
                                             to={row.id}
                                             color={'text.primary'}
                                         >
-                                            <Typography fontFamily='monospace'>
+                                            <Typography
+                                                fontFamily='monospace'
+                                                variant='body2'
+                                            >
                                                 {row.id.substring(0, 8)}
                                             </Typography>
                                         </Link>

@@ -6,7 +6,7 @@ import {
     Link as RouterLink,
 } from 'react-router-dom';
 import TextField from '@mui/material/TextField';
-import axios, { AxiosResponse } from 'axios';
+import axios, { AxiosResponse, CancelToken } from 'axios';
 import LoadingButton from '@mui/lab/LoadingButton';
 import SaveIcon from '@mui/icons-material/Save';
 import Box from '@mui/system/Box';
@@ -18,11 +18,14 @@ import { useFormik } from 'formik';
 import * as Yup from 'yup';
 import { ApiEditItem, Category, EditItem, Item, Unit } from './Items';
 import { DateTime } from 'luxon';
+import { useSnackbar } from 'notistack';
+import { useAsyncEffect } from 'use-async-effect';
 
 export default function Edit() {
     const navigate = useNavigate();
     const location = useLocation();
     const params = useParams();
+    const { enqueueSnackbar, closeSnackbar } = useSnackbar();
 
     const [loading, setLoading] = React.useState(false);
     const [locked, setLocked] = React.useState(false);
@@ -66,51 +69,59 @@ export default function Edit() {
                 .required('Required'),
         }),
         onSubmit: async values => {
-            try {
-                setLocked(true);
-
-                const result = await axios.put<
-                    { id: string; },
-                    AxiosResponse<{ id: string; }>,
-                    ApiEditItem
-                >(
-                    `/api${location.pathname}/..`,
-                    {
-                        name: values.name,
-                        safetyStock: values.safetyStock,
-                        stock: values.stock,
-                        remarks: values.remarks,
-                        unit: values.Unit!.id!,
-                        category: values.Category!.id!,
-                    },
-                )
-                    .then(result => result.data);
-
-                navigate(`../${result}`, { replace: true });
-            } catch (error) {
-
-            } finally {
-                setLocked(false);
-            }
+            setLocked(true);
+            await axios.put<
+                { id: string; },
+                AxiosResponse<{ id: string; }>,
+                ApiEditItem
+            >(
+                `/api${location.pathname}/..`,
+                {
+                    name: values.name,
+                    safetyStock: values.safetyStock,
+                    stock: values.stock,
+                    remarks: values.remarks,
+                    unit: values.Unit!.id!,
+                    category: values.Category!.id!,
+                })
+                .then(result => result.data)
+                .then(result => {
+                    navigate(`../${params.itemID}`, { replace: true });
+                    enqueueSnackbar('Edit item successful', { variant: 'success' });
+                })
+                .catch(error => {
+                    enqueueSnackbar('Edit item failed', { variant: 'error' });
+                    if (error.response) {
+                        const data = error.response.data;
+                        for (const e of data.errors) {
+                            formik.setFieldError(e.path, e.message);
+                        }
+                    }
+                })
+                .finally(() => {
+                    setLocked(false);
+                });
         },
     });
 
-    React.useEffect(() => {
+    useAsyncEffect(async isActive => {
         setLoading(true);
-        axios.get<Item>(`/api${location.pathname}/..`)
+        await axios.get<Item>(`/api${location.pathname}/..`)
             .then(result => result.data)
             .then(result => {
-                    formik.setFieldValue('name', result.name);
-                    formik.setFieldValue('safetyStock', result.safetyStock);
-                    formik.setFieldValue('stock', result.stock);
-                    formik.setFieldValue('remarks', result.remarks);
-                    formik.setFieldValue('Unit', result.Unit);
-                    formik.setFieldValue('Category', result.Category);
-                    formik.setFieldValue('createdAt', result.createdAt);
-                    formik.setFieldValue('updatedAt', result.updatedAt);
-                    formik.setFieldValue('deletedAt', result.deletedAt);
-                }
-            )
+                formik.setFieldValue('name', result.name);
+                formik.setFieldValue('safetyStock', result.safetyStock);
+                formik.setFieldValue('stock', result.stock);
+                formik.setFieldValue('remarks', result.remarks);
+                formik.setFieldValue('Unit', result.Unit);
+                formik.setFieldValue('Category', result.Category);
+                formik.setFieldValue('createdAt', result.createdAt);
+                formik.setFieldValue('updatedAt', result.updatedAt);
+                formik.setFieldValue('deletedAt', result.deletedAt);
+            })
+            .catch(error => {
+                enqueueSnackbar('Error loading data', { variant: 'error' });
+            })
             .finally(() => {
                 setLoading(false);
             });
@@ -119,11 +130,14 @@ export default function Edit() {
     const queryUnits = React.useMemo(
         () =>
             throttle(
-                (
+                async (
                     request: { input: string; },
-                    callback: (results?: readonly Unit[]) => void,
+                    callback: (results: Unit[]) => void,
+                    cancelToken: CancelToken,
                 ) => {
-                    axios.get<{ count: number; results: Unit[]; }>(
+                    await axios.get<
+                        { count: number; results: Unit[]; }
+                    >(
                         `/api/units`,
                         {
                             params: {
@@ -132,20 +146,12 @@ export default function Edit() {
                                     showDeleted: false,
                                 },
                             },
-                        },
-                    )
+                            cancelToken: cancelToken,
+                        })
                         .then(result => result.data)
-                        .then(
-                            (data) => {
-                                callback(data.results);
-                            },
-                            // Note: it's important to handle errors here
-                            // instead of a catch() block so that we don't swallow
-                            // exceptions from actual bugs in components.
-                            (error) => {
-
-                            }
-                        );
+                        .then(data => {
+                            callback(data.results);
+                        });
                 },
                 200,
             ),
@@ -153,16 +159,17 @@ export default function Edit() {
     );
 
     React.useEffect(() => {
-        let active = true;
+        const cancelTokenSource = axios.CancelToken.source();
 
         if (unitInputValue === '') {
             setUnitOptions(formik.values.Unit ? [formik.values.Unit] : []);
-            return undefined;
+            return;
         }
 
-        queryUnits({ input: unitInputValue }, (results?: readonly Unit[]) => {
-            if (active) {
-                let newOptions: readonly Unit[] = [];
+        queryUnits(
+            { input: unitInputValue },
+            (results: Unit[]) => {
+                let newOptions: Unit[] = [];
 
                 if (formik.values.Unit) {
                     newOptions = [formik.values.Unit];
@@ -173,22 +180,26 @@ export default function Edit() {
                 }
 
                 setUnitOptions(newOptions);
-            }
-        });
+            },
+            cancelTokenSource.token,
+        );
 
         return () => {
-            active = false;
+            cancelTokenSource.cancel();
         };
     }, [formik.values.Unit, unitInputValue, queryUnits]);
 
     const queryCategories = React.useMemo(
         () =>
             throttle(
-                (
+                async (
                     request: { input: string; },
-                    callback: (results?: readonly Category[]) => void,
+                    callback: (results: Category[]) => void,
+                    cancelToken: CancelToken,
                 ) => {
-                    axios.get<{ count: number; results: Category[]; }>(
+                    await axios.get<
+                        { count: number; results: Category[]; }
+                    >(
                         `/api/categories`,
                         {
                             params: {
@@ -197,20 +208,12 @@ export default function Edit() {
                                     showDeleted: false,
                                 },
                             },
-                        },
-                    )
+                            cancelToken: cancelToken,
+                        })
                         .then(result => result.data)
-                        .then(
-                            (data) => {
-                                callback(data.results);
-                            },
-                            // Note: it's important to handle errors here
-                            // instead of a catch() block so that we don't swallow
-                            // exceptions from actual bugs in components.
-                            (error) => {
-
-                            }
-                        );
+                        .then(data => {
+                            callback(data.results);
+                        });
                 },
                 200,
             ),
@@ -218,16 +221,17 @@ export default function Edit() {
     );
 
     React.useEffect(() => {
-        let active = true;
+        const cancelTokenSource = axios.CancelToken.source();
 
         if (categoryInputValue === '') {
             setCategoryOptions(formik.values.Category ? [formik.values.Category] : []);
-            return undefined;
+            return;
         }
 
-        queryCategories({ input: categoryInputValue }, (results?: readonly Category[]) => {
-            if (active) {
-                let newOptions: readonly Category[] = [];
+        queryCategories(
+            { input: categoryInputValue },
+            (results: Category[]) => {
+                let newOptions: Category[] = [];
 
                 if (formik.values.Category) {
                     newOptions = [formik.values.Category];
@@ -238,30 +242,30 @@ export default function Edit() {
                 }
 
                 setCategoryOptions(newOptions);
-            }
-        });
+            },
+            cancelTokenSource.token,
+        );
 
         return () => {
-            active = false;
+            cancelTokenSource.cancel();
         };
     }, [formik.values.Category, categoryInputValue, queryCategories]);
 
     return (
-        <Box>
+        <Stack
+            sx={{
+                boxSizing: 'border-box',
+                flex: '1 1 auto',
+            }}
+        >
             {loading ?
                 <LinearProgress />
                 :
-                <Stack
-                    spacing={2}
-                    sx={{
-                        marginY: 2
-                    }}
-                >
+                <React.Fragment>
                     <Box
                         sx={{
                             display: 'flex',
-                            justifyContent: 'flex-start',
-                            marginX: 2,
+                            padding: 2,
                         }}
                     >
                         <Stack direction="row" spacing={2}>
@@ -487,8 +491,8 @@ export default function Edit() {
                             />
                         </Stack>
                     }
-                </Stack>
+                </React.Fragment>
             }
-        </Box >
+        </Stack>
     );
-}
+};

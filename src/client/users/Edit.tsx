@@ -17,11 +17,14 @@ import * as Yup from 'yup';
 import { Android12Switch } from '../Switch';
 import { ApiEditUser, EditUser, User } from './Users';
 import { DateTime } from 'luxon';
+import { useSnackbar } from 'notistack';
+import { useAsyncEffect } from 'use-async-effect';
 
 export default function Edit() {
     const navigate = useNavigate();
     const location = useLocation();
     const params = useParams();
+    const { enqueueSnackbar, closeSnackbar } = useSnackbar();
 
     const [loading, setLoading] = React.useState(false);
     const [locked, setLocked] = React.useState(false);
@@ -47,68 +50,74 @@ export default function Edit() {
                 .required('Required'),
         }),
         onSubmit: async values => {
-            try {
-                setLocked(true);
-
-                await axios.put<
-                    { id: string; },
-                    AxiosResponse<{ id: string; }>,
-                    ApiEditUser
-                >(
-                    `/api${location.pathname}/..`,
-                    {
-                        username: values.username,
-                        firstName: values.firstName,
-                        lastName: values.lastName,
-                        admin: values.admin,
-                    },
-                )
-                    .then(result => result.data);
-
-                navigate(`../${params.userID}`, { replace: true });
-            } catch (error) {
-
-            } finally {
-                setLocked(false);
-            }
+            setLocked(true);
+            await axios.put<
+                { id: string; },
+                AxiosResponse<{ id: string; }>,
+                ApiEditUser
+            >(
+                `/api${location.pathname}/..`,
+                {
+                    username: values.username,
+                    firstName: values.firstName,
+                    lastName: values.lastName,
+                    admin: values.admin,
+                })
+                .then(result => {
+                    navigate(`../${params.userID}`, { replace: true });
+                    enqueueSnackbar('Edit user successful', { variant: 'success' });
+                })
+                .catch(error => {
+                    enqueueSnackbar('Edit user failed', { variant: 'error' });
+                })
+                .finally(() => {
+                    setLocked(false);
+                });
         },
     });
 
-    React.useEffect(() => {
+    useAsyncEffect(async isActive => {
         setLoading(true);
-        axios.get<User>(`/api${location.pathname}/..`)
+        await axios.get<User>(`/api${location.pathname}/..`)
             .then(result => result.data)
             .then(result => {
-                    formik.setFieldValue('username', result.username);
-                    formik.setFieldValue('firstName', result.firstName);
-                    formik.setFieldValue('lastName', result.lastName);
-                    formik.setFieldValue('admin', result.admin);
-                    formik.setFieldValue('createdAt', result.createdAt);
-                    formik.setFieldValue('updatedAt', result.updatedAt);
-                    formik.setFieldValue('deletedAt', result.deletedAt);
+                formik.setFieldValue('username', result.username);
+                formik.setFieldValue('firstName', result.firstName);
+                formik.setFieldValue('lastName', result.lastName);
+                formik.setFieldValue('admin', result.admin);
+                formik.setFieldValue('createdAt', result.createdAt);
+                formik.setFieldValue('updatedAt', result.updatedAt);
+                formik.setFieldValue('deletedAt', result.deletedAt);
+            })
+            .catch(error => {
+                enqueueSnackbar('Error loading data', { variant: 'error' });
+                if (error.response) {
+                    const data = error.response.data;
+                    for (const e of data.errors) {
+                        formik.setFieldError(e.path, e.message);
+                    }
                 }
-            )
+            })
             .finally(() => {
                 setLoading(false);
             });
     }, [location.pathname]);
 
     return (
-        <Box>
+        <Stack
+            sx={{
+                boxSizing: 'border-box',
+                flex: '1 1 auto',
+            }}
+        >
             {loading ?
                 <LinearProgress />
                 :
-                <Stack
-                    spacing={2}
-                    sx={{
-                        marginY: 2
-                    }}
-                >
+                <React.Fragment>
                     <Box
                         sx={{
                             display: 'flex',
-                            justifyContent: 'flex-start',
-                            marginX: 2,
+                            padding: 2,
                         }}
                     >
                         <Stack direction="row" spacing={2}>
@@ -271,8 +280,8 @@ export default function Edit() {
                             />
                         </Stack>
                     }
-                </Stack>
+                </React.Fragment>
             }
-        </Box >
+        </Stack>
     );
 };

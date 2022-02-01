@@ -16,11 +16,14 @@ import { useFormik } from 'formik';
 import * as Yup from 'yup';
 import { ApiChangePasswordUser, ChangePasswordUser, User } from './Users';
 import { DateTime } from 'luxon';
+import { useSnackbar } from 'notistack';
+import { useAsyncEffect } from 'use-async-effect';
 
 export default function ChangePassword() {
     const navigate = useNavigate();
     const location = useLocation();
     const params = useParams();
+    const { enqueueSnackbar, closeSnackbar } = useSnackbar();
 
     const [loading, setLoading] = React.useState(false);
     const [locked, setLocked] = React.useState(false);
@@ -39,6 +42,8 @@ export default function ChangePassword() {
         },
         validationSchema: Yup.object().shape({
             password: Yup.string()
+                .min(16, 'Must be at least 16 characters long')
+                .matches(/^[A-Za-z0-9]+$/, 'Can only contain lowercase letters, uppercase letters, and characters')
                 .required('Required'),
             passwordVerification: Yup.string()
                 .test('passwords-match', 'Passwords must match', function (value) {
@@ -47,66 +52,73 @@ export default function ChangePassword() {
                 }),
         }),
         onSubmit: async values => {
-            try {
-                setLocked(true);
-
-                await axios.put<
-                    { id: string; },
-                    AxiosResponse<{ id: string; }>,
-                    ApiChangePasswordUser
-                >(
-                    `/api${location.pathname}`,
-                    {
-                        password: values.password,
-                    },
-                )
-                    .then(result => result.data);
-
-                navigate(`../${params.userID}`, { replace: true });
-            } catch (error) {
-
-            } finally {
-                setLocked(false);
-            }
+            setLocked(true);
+            await axios.put<
+                { id: string; },
+                AxiosResponse<{ id: string; }>,
+                ApiChangePasswordUser
+            >(
+                `/api${location.pathname}`,
+                {
+                    password: values.password,
+                })
+                .then(result => result.data)
+                .then(result => {
+                    navigate(`../${params.userID}`, { replace: true });
+                    enqueueSnackbar('Change password successful', { variant: 'success' });
+                })
+                .catch(error => {
+                    enqueueSnackbar('Change password failed', { variant: 'error' });
+                    if (error.response) {
+                        const data = error.response.data;
+                        for (const e of data.errors) {
+                            formik.setFieldError(e.path, e.message);
+                        }
+                    }
+                })
+                .finally(() => {
+                    setLocked(false);
+                });
         },
     });
 
-    React.useEffect(() => {
+    useAsyncEffect(async isActive => {
         setLoading(true);
-        axios.get<User>(`/api${location.pathname}/..`)
+        await axios.get<User>(`/api${location.pathname}/..`)
             .then(result => result.data)
             .then(result => {
-                    formik.setFieldValue('username', result.username);
-                    formik.setFieldValue('firstName', result.firstName);
-                    formik.setFieldValue('lastName', result.lastName);
-                    formik.setFieldValue('admin', result.admin);
-                    formik.setFieldValue('createdAt', result.createdAt);
-                    formik.setFieldValue('updatedAt', result.updatedAt);
-                    formik.setFieldValue('deletedAt', result.deletedAt);
-                }
-            )
+                formik.setFieldValue('username', result.username);
+                formik.setFieldValue('firstName', result.firstName);
+                formik.setFieldValue('lastName', result.lastName);
+                formik.setFieldValue('admin', result.admin);
+                formik.setFieldValue('createdAt', result.createdAt);
+                formik.setFieldValue('updatedAt', result.updatedAt);
+                formik.setFieldValue('deletedAt', result.deletedAt);
+            })
+            .catch(error => {
+                if (axios.isCancel(error)) return;
+                enqueueSnackbar('Error loading data', { variant: 'error' });
+            })
             .finally(() => {
                 setLoading(false);
             });
     }, [location.pathname]);
 
-
     return (
-        <Box>
+        <Stack
+            sx={{
+                boxSizing: 'border-box',
+                flex: '1 1 auto',
+            }}
+        >
             {loading ?
                 <LinearProgress />
                 :
-                <Stack
-                    spacing={2}
-                    sx={{
-                        marginY: 2
-                    }}
-                >
+                <React.Fragment>
                     <Box
                         sx={{
                             display: 'flex',
-                            justifyContent: 'flex-start',
-                            marginX: 2,
+                            padding: 2,
                         }}
                     >
                         <Stack direction="row" spacing={2}>
@@ -198,8 +210,8 @@ export default function ChangePassword() {
                             />
                         </Stack>
                     }
-                </Stack>
+                </React.Fragment>
             }
-        </Box >
+        </Stack>
     );
 };

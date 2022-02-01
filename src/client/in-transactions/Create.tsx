@@ -15,7 +15,6 @@ import {
     TableHead,
     TableRow,
     TextField,
-    Toolbar,
     Tooltip,
     Typography,
 } from '@mui/material';
@@ -34,11 +33,13 @@ import {
 import { ApiCreateInTransaction, CreateInTransaction, InTransfer, InTransferStrip } from './InTransactions';
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
-import { ClickAwayListener } from '@mui/base';
+import { useSnackbar } from 'notistack';
 
 export default function Create() {
     const navigate = useNavigate();
     const location = useLocation();
+    const { enqueueSnackbar, closeSnackbar } = useSnackbar();
+
     const [locked, setLocked] = React.useState(false);
 
     const [selectedInTransfer, setSelectedInTransfer] = React.useState<Readonly<InTransfer> | null>(null);
@@ -67,53 +68,59 @@ export default function Create() {
                 .required('Required'),
         }),
         onSubmit: async values => {
-            try {
-                setLocked(true);
-
-                const result = await axios.post<
-                    { id: string; },
-                    AxiosResponse<{ id: string; }>,
-                    ApiCreateInTransaction
-                >(
-                    `/api${location.pathname}/..`,
-                    {
-                        supplier: values.supplier,
-                        deliveryReceipt: values.deliveryReceipt,
-                        dateOfDeliveryReceipt: values.dateOfDeliveryReceipt !== null && values.dateOfDeliveryReceipt.isValid ? values.dateOfDeliveryReceipt : null,
-                        dateReceived: values.dateReceived !== null && values.dateReceived.isValid ? values.dateReceived : null,
-                        inTransfers: values.InTransfers.map<{
-                            item: string;
-                            quantity: number;
-                        }>((inTransfer) => {
-                            return {
-                                item: inTransfer.item,
-                                quantity: inTransfer.quantity,
-                            };
-                        })
-                    },
-                )
-                    .then(result => result.data);
-
-                navigate(`../${result}`, { replace: true });
-            } catch (error) {
-
-            } finally {
-                setLocked(false);
-            }
+            setLocked(true);
+            await axios.post<
+                { id: string; },
+                AxiosResponse<{ id: string; }>,
+                ApiCreateInTransaction
+            >(
+                `/api${location.pathname}/..`,
+                {
+                    supplier: values.supplier,
+                    deliveryReceipt: values.deliveryReceipt,
+                    dateOfDeliveryReceipt: values.dateOfDeliveryReceipt !== null && values.dateOfDeliveryReceipt.isValid ? values.dateOfDeliveryReceipt : null,
+                    dateReceived: values.dateReceived !== null && values.dateReceived.isValid ? values.dateReceived : null,
+                    inTransfers: values.InTransfers.map<{
+                        item: string;
+                        quantity: number;
+                    }>((inTransfer) => {
+                        return {
+                            item: inTransfer.item,
+                            quantity: inTransfer.quantity,
+                        };
+                    })
+                })
+                .then(result => result.data)
+                .then(result => {
+                    navigate(`../${result}`, { replace: true });
+                    enqueueSnackbar('Create in-transaction successful', { variant: 'success' });
+                })
+                .catch(error => {
+                    enqueueSnackbar('Create in-transaction failed', { variant: 'error' });
+                    if (error.response) {
+                        const data = error.response.data;
+                        for (const e of data.errors) {
+                            formik.setFieldError(e.path, e.message);
+                        }
+                    }
+                })
+                .finally(() => {
+                    setLocked(false);
+                });
         },
     });
 
     return (
-        <Stack spacing={2}
+        <Stack
             sx={{
-                marginY: 2
+                boxSizing: 'border-box',
+                flex: '1 1 auto',
             }}
         >
             <Box
                 sx={{
                     display: 'flex',
-                    justifyContent: 'flex-start',
-                    marginX: 2,
+                    padding: 2,
                 }}
             >
                 <Stack direction="row" spacing={2}>
@@ -232,56 +239,28 @@ export default function Create() {
                             borderColor: formik.touched.InTransfers && Boolean(formik.errors.InTransfers) ? red[700] : 'rgba(0, 0, 0, 0.42)',
                         }}
                     >
-                        <ClickAwayListener
-                            mouseEvent="onMouseDown"
-                            touchEvent="onTouchStart"
-                            onClickAway={() => { formik.setFieldTouched('InTransfers', true, true); }}
-                        >
-                            <Toolbar
-                                disableGutters
-                                sx={{
-                                    px: '12px',
-                                    backgroundColor: 'rgba(0, 0, 0, 0.06)',
-                                    ":hover": {
-                                        backgroundColor: 'rgba(0, 0, 0, 0.09)',
-                                    },
-                                }}
-                            >
-                                <Typography
-                                    sx={{ flex: '1 1 auto' }}
-                                    color={formik.touched.InTransfers && Boolean(formik.errors.InTransfers) ? red[700] : "inherit"}
-                                    variant="subtitle1"
-                                    component="div"
-                                >
-                                    In-Transfers
-                                </Typography>
-                                <Box
-                                    sx={{ marginLeft: 'auto' }}
-                                >
-                                    <InTransferStrip
-                                        inTransfers={formik.values.InTransfers}
-                                        handleSave={(inTransfer) => {
-                                            const value = [...formik.values.InTransfers];
-                                            const index = value.findIndex((_inTransfer) => {
-                                                return _inTransfer.item === inTransfer.item;
-                                            });
-                                            if (index === -1) {
-                                                value.push(inTransfer);
-                                            } else {
-                                                value[index].quantity = inTransfer.quantity;
-                                            }
-                                            formik.setFieldValue('InTransfers', value);
-                                        }}
-                                        handleBlur={() => { }}
-                                    />
-                                </Box>
-                            </Toolbar>
-                        </ClickAwayListener>
+                        <InTransferStrip
+                            inTransfers={formik.values.InTransfers}
+                            handleSave={(inTransfer) => {
+                                const value = [...formik.values.InTransfers];
+                                const index = value.findIndex((_inTransfer) => {
+                                    return _inTransfer.item === inTransfer.item;
+                                });
+                                if (index === -1) {
+                                    value.push(inTransfer);
+                                } else {
+                                    value[index].quantity = inTransfer.quantity;
+                                }
+                                formik.setFieldValue('InTransfers', value);
+                            }}
+                            handleBlur={() => { formik.setFieldTouched('InTransfers', true, true); }}
+                            hasError={Boolean(formik.touched.InTransfers && Boolean(formik.errors.InTransfers))}
+                        />
                         {
                             Boolean(formik.values.InTransfers.length !== 0)
                             &&
                             <TableContainer>
-                                <Table sx={{ minWidth: 650 }} size="small" >
+                                <Table size="small" >
                                     <TableHead>
                                         <TableRow>
                                             <TableCell>Item ID</TableCell>
@@ -302,7 +281,10 @@ export default function Create() {
                                                 sx={{ '&:last-child td, &:last-child th': { border: 0 }, cursor: 'pointer' }}>
                                                 <TableCell>
                                                     <Tooltip title={row.item} placement="right">
-                                                        <Typography fontFamily='monospace'>
+                                                        <Typography
+                                                            fontFamily='monospace'
+                                                            variant='body2'
+                                                        >
                                                             {row.item.substring(0, 8)}
                                                         </Typography>
                                                     </Tooltip>
@@ -367,7 +349,10 @@ export default function Create() {
                                                                 }}
                                                             />
                                                             :
-                                                            <Typography fontFamily='monospace'>
+                                                            <Typography
+                                                                fontFamily='monospace'
+                                                                variant='body2'
+                                                            >
                                                                 {row.quantity}
                                                             </Typography>
                                                     }

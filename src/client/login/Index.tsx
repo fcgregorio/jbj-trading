@@ -11,10 +11,12 @@ import { AuthContext } from '../Context';
 import { User } from '../models';
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
+import { useSnackbar } from 'notistack';
 
 export default function Index() {
     const navigate = useNavigate();
     const location = useLocation();
+    const { enqueueSnackbar, closeSnackbar } = useSnackbar();
 
     const [authContext, setAuthContext] = React.useContext(AuthContext);
 
@@ -28,8 +30,8 @@ export default function Index() {
 
     const formik = useFormik({
         initialValues: {
-            username: undefined,
-            password: undefined,
+            username: '',
+            password: '',
         },
         validationSchema: Yup.object().shape({
             username: Yup.string()
@@ -38,34 +40,43 @@ export default function Index() {
                 .required('Required'),
         }),
         onSubmit: async values => {
-            try {
-                setLocked(true);
-
-                const token = await axios.post<{ username: string; password: string; }, AxiosResponse<string>>(
-                    `/api${location.pathname}`,
-                    {
-                        username: values.username,
-                        password: values.password,
-                    },
-                )
-                    .then(result => result.data);
-
-                const user = await axios.get<never, AxiosResponse<User>>(
-                    '/api/users/self',
-                    {
-                        headers: {
-                            Authorization: `Bearer ${token}`,
-                        },
-                    },
-                )
-                    .then(result => result.data);
-
-                setAuthContext({ user: user, token: token });
-            } catch (error) {
-
-            } finally {
-                setLocked(false);
-            }
+            setLocked(true);
+            await axios.post<
+                string,
+                AxiosResponse<string>,
+                {
+                    username: string;
+                    password: string;
+                }
+            >(
+                `/api${location.pathname}`,
+                {
+                    username: values.username,
+                    password: values.password,
+                })
+                .then(result => result.data)
+                .then(token => {
+                    return axios.get<
+                        User,
+                        AxiosResponse<User>
+                    >(
+                        '/api/users/self',
+                        {
+                            headers: {
+                                Authorization: `Bearer ${token}`,
+                            },
+                        })
+                        .then(result => result.data)
+                        .then(user => {
+                            setAuthContext({ user: user, token: token });
+                        });
+                })
+                .catch((errror) => {
+                    enqueueSnackbar('Login failed', { variant: 'error' });
+                })
+                .finally(() => {
+                    setLocked(false);
+                });
         },
     });
 

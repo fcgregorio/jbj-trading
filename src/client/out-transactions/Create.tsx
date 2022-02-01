@@ -34,11 +34,13 @@ import {
 import { ApiCreateOutTransaction, CreateOutTransaction, OutTransfer, OutTransferStrip } from './OutTransactions';
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
-import { ClickAwayListener } from '@mui/base';
+import { useSnackbar } from 'notistack';
 
 export default function Create() {
     const navigate = useNavigate();
     const location = useLocation();
+    const { enqueueSnackbar, closeSnackbar } = useSnackbar();
+
     const [locked, setLocked] = React.useState(false);
 
     const [selectedOutTransfer, setSelectedOutTransfer] = React.useState<Readonly<OutTransfer> | null>(null);
@@ -63,52 +65,58 @@ export default function Create() {
                 .required('Required'),
         }),
         onSubmit: async values => {
-            try {
-                setLocked(true);
-
-                const result = await axios.post<
-                    { id: string; },
-                    AxiosResponse<{ id: string; }>,
-                    ApiCreateOutTransaction
-                >(
-                    `/api${location.pathname}/..`,
-                    {
-                        customer: values.customer,
-                        deliveryReceipt: values.deliveryReceipt,
-                        dateOfDeliveryReceipt: values.dateOfDeliveryReceipt !== null && values.dateOfDeliveryReceipt.isValid ? values.dateOfDeliveryReceipt : null,
-                        outTransfers: values.OutTransfers.map<{
-                            item: string;
-                            quantity: number;
-                        }>((outTransfer) => {
-                            return {
-                                item: outTransfer.item,
-                                quantity: outTransfer.quantity,
-                            };
-                        })
-                    },
-                )
-                    .then(result => result.data);
-
-                navigate(`../${result}`, { replace: true });
-            } catch (error) {
-
-            } finally {
-                setLocked(false);
-            }
+            setLocked(true);
+            await axios.post<
+                { id: string; },
+                AxiosResponse<{ id: string; }>,
+                ApiCreateOutTransaction
+            >(
+                `/api${location.pathname}/..`,
+                {
+                    customer: values.customer,
+                    deliveryReceipt: values.deliveryReceipt,
+                    dateOfDeliveryReceipt: values.dateOfDeliveryReceipt !== null && values.dateOfDeliveryReceipt.isValid ? values.dateOfDeliveryReceipt : null,
+                    outTransfers: values.OutTransfers.map<{
+                        item: string;
+                        quantity: number;
+                    }>((outTransfer) => {
+                        return {
+                            item: outTransfer.item,
+                            quantity: outTransfer.quantity,
+                        };
+                    })
+                })
+                .then(result => result.data)
+                .then(result => {
+                    navigate(`../${result}`, { replace: true });
+                    enqueueSnackbar('Create out-transaction successful', { variant: 'success' });
+                })
+                .catch(error => {
+                    enqueueSnackbar('Create out-transaction failed', { variant: 'error' });
+                    if (error.response) {
+                        const data = error.response.data;
+                        for (const e of data.errors) {
+                            formik.setFieldError(e.path, e.message);
+                        }
+                    }
+                })
+                .finally(() => {
+                    setLocked(false);
+                });
         },
     });
 
     return (
-        <Stack spacing={2}
+        <Stack
             sx={{
-                marginY: 2
+                boxSizing: 'border-box',
+                flex: '1 1 auto',
             }}
         >
             <Box
                 sx={{
                     display: 'flex',
-                    justifyContent: 'flex-start',
-                    marginX: 2,
+                    padding: 2,
                 }}
             >
                 <Stack direction="row" spacing={2}>
@@ -209,56 +217,28 @@ export default function Create() {
                             borderColor: formik.touched.OutTransfers && Boolean(formik.errors.OutTransfers) ? red[700] : 'rgba(0, 0, 0, 0.42)',
                         }}
                     >
-                        <ClickAwayListener
-                            mouseEvent="onMouseDown"
-                            touchEvent="onTouchStart"
-                            onClickAway={() => { formik.setFieldTouched('OutTransfers', true, true); }}
-                        >
-                            <Toolbar
-                                disableGutters
-                                sx={{
-                                    px: '12px',
-                                    backgroundColor: 'rgba(0, 0, 0, 0.06)',
-                                    ":hover": {
-                                        backgroundColor: 'rgba(0, 0, 0, 0.09)',
-                                    },
-                                }}
-                            >
-                                <Typography
-                                    sx={{ flex: '1 1 auto' }}
-                                    color={formik.touched.OutTransfers && Boolean(formik.errors.OutTransfers) ? red[700] : "inherit"}
-                                    variant="subtitle1"
-                                    component="div"
-                                >
-                                    Out-Transfers
-                                </Typography>
-                                <Box
-                                    sx={{ marginLeft: 'auto' }}
-                                >
-                                    <OutTransferStrip
-                                        outTransfers={formik.values.OutTransfers}
-                                        handleSave={(outTransfer) => {
-                                            const value = [...formik.values.OutTransfers];
-                                            const index = value.findIndex((_outTransfer) => {
-                                                return _outTransfer.item === outTransfer.item;
-                                            });
-                                            if (index === -1) {
-                                                value.push(outTransfer);
-                                            } else {
-                                                value[index].quantity = outTransfer.quantity;
-                                            }
-                                            formik.setFieldValue('OutTransfers', value);
-                                        }}
-                                        handleBlur={() => { }}
-                                    />
-                                </Box>
-                            </Toolbar>
-                        </ClickAwayListener>
+                        <OutTransferStrip
+                            outTransfers={formik.values.OutTransfers}
+                            handleSave={(outTransfer) => {
+                                const value = [...formik.values.OutTransfers];
+                                const index = value.findIndex((_outTransfer) => {
+                                    return _outTransfer.item === outTransfer.item;
+                                });
+                                if (index === -1) {
+                                    value.push(outTransfer);
+                                } else {
+                                    value[index].quantity = outTransfer.quantity;
+                                }
+                                formik.setFieldValue('OutTransfers', value);
+                            }}
+                            handleBlur={() => { formik.setFieldTouched('OutTransfers', true, true); }}
+                            hasError={Boolean(formik.touched.OutTransfers && Boolean(formik.errors.OutTransfers))}
+                        />
                         {
                             Boolean(formik.values.OutTransfers.length !== 0)
                             &&
                             <TableContainer>
-                                <Table sx={{ minWidth: 650 }} size="small" >
+                                <Table size="small" >
                                     <TableHead>
                                         <TableRow>
                                             <TableCell>Item ID</TableCell>
@@ -277,7 +257,10 @@ export default function Create() {
                                                 sx={{ '&:last-child td, &:last-child th': { border: 0 }, cursor: 'pointer' }}>
                                                 <TableCell>
                                                     <Tooltip title={row.item} placement="right">
-                                                        <Typography fontFamily='monospace'>
+                                                        <Typography
+                                                            fontFamily='monospace'
+                                                            variant='body2'
+                                                        >
                                                             {row.item.substring(0, 8)}
                                                         </Typography>
                                                     </Tooltip>
@@ -342,7 +325,10 @@ export default function Create() {
                                                                 }}
                                                             />
                                                             :
-                                                            <Typography fontFamily='monospace'>
+                                                            <Typography
+                                                                fontFamily='monospace'
+                                                                variant='body2'
+                                                            >
                                                                 {row.quantity}
                                                             </Typography>
                                                     }

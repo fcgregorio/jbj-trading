@@ -1,7 +1,7 @@
 import { NextFunction, Request, Response, Router } from 'express';
 import sequelize, { Item, Unit, Category, ItemAttributes, ItemHistoryAttributes, ItemHistory, User } from '../../sequelize';
 import { loginRequiredMiddleware, adminRequiredMiddleware } from '../../middleware/auth';
-import { Op, WhereOptions } from 'sequelize';
+import { Op, where, WhereOptions } from 'sequelize';
 
 const router = Router();
 router.use(loginRequiredMiddleware);
@@ -45,24 +45,44 @@ router.get('/', async function (req: Request, res: Response, next: NextFunction)
             filters.showDeleted = false;
         }
 
-        let where: WhereOptions<ItemAttributes> = {};
+        let whereAnd: any[] = [];
 
         const searchQuery = req.query.search as string;
         if (searchQuery !== undefined && searchQuery !== '') {
-            where = {
-                ...where,
-                name: {
-                    [Op.like]: '%' + searchQuery + '%', // TODO
+            whereAnd.push(
+                {
+                    [Op.or]: {
+                        name: {
+                            [Op.like]: `%${searchQuery}%`, // TODO
+                        },
+                        remarks: {
+                            [Op.like]: `%${searchQuery}%`, // TODO
+                        },
+                        '$Unit.name$': {
+                            [Op.like]: `%${searchQuery}%`, // TODO
+                        },
+                        '$Category.name$': {
+                            [Op.like]: `%${searchQuery}%`, // TODO
+                        },
+                    },
                 },
-                remarks: {
-                    [Op.like]: '%' + searchQuery + '%', // TODO
-                },
-            };
-
+            );
         }
 
         const count = await Item.count({
-            where: where,
+            where: {
+                [Op.and]: whereAnd,
+            },
+            include: [
+                {
+                    model: Unit,
+                    paranoid: false,
+                },
+                {
+                    model: Category,
+                    paranoid: false,
+                },
+            ],
         });
 
         const cursorQuery = req.query.cursor as string;
@@ -75,28 +95,29 @@ router.get('/', async function (req: Request, res: Response, next: NextFunction)
                 },
             );
 
-            where = {
-                ...where,
-                [Op.or]: [
-                    {
-                        createdAt: {
-                            [Op.lt]: cursor.createdAt,
+            whereAnd.push(
+                {
+                    [Op.or]: [
+                        {
+                            createdAt: {
+                                [Op.lt]: cursor.createdAt,
+                            },
                         },
-                    },
-                    {
-                        [Op.and]: [
-                            {
-                                createdAt: cursor.createdAt,
-                            },
-                            {
-                                id: {
-                                    [Op.lt]: cursor.id,
+                        {
+                            [Op.and]: [
+                                {
+                                    createdAt: cursor.createdAt,
                                 },
-                            },
-                        ]
-                    },
-                ]
-            };
+                                {
+                                    id: {
+                                        [Op.lt]: cursor.id,
+                                    },
+                                },
+                            ]
+                        },
+                    ]
+                }
+            );
         }
 
         const results = await Item.findAll({
@@ -110,13 +131,100 @@ router.get('/', async function (req: Request, res: Response, next: NextFunction)
                     paranoid: false,
                 },
             ],
-            where: where,
+            where: {
+                [Op.and]: whereAnd,
+            },
             order: [
                 ['createdAt', 'DESC'],
                 ['id', 'DESC'],
             ],
             limit: 100,
             paranoid: !filters.showDeleted,
+        });
+
+        res.status(200).json({
+            count: count,
+            results: results,
+        });
+    } catch (error: any) {
+        console.log(error);
+        next(error);
+    }
+});
+
+router.get('/alerts', adminRequiredMiddleware, async function (req: Request, res: Response, next: NextFunction) {
+    try {
+        let whereAnd: any[] = [];
+
+        whereAnd.push(
+            {
+                stock: {
+                    [Op.lte]: sequelize.col('safetyStock'),
+                },
+            }
+        );
+
+        const count = await Item.count({
+            where: {
+                [Op.and]: whereAnd,
+            },
+        });
+
+        const cursorQuery = req.query.cursor as string;
+        console.log(cursorQuery);
+        if (cursorQuery !== undefined) {
+            const cursor = await Item.findByPk(
+                cursorQuery,
+                {
+                    attributes: ['id', 'createdAt'],
+                    rejectOnEmpty: true,
+                },
+            );
+
+            whereAnd.push(
+                {
+                    [Op.or]: [
+                        {
+                            createdAt: {
+                                [Op.lt]: cursor.createdAt,
+                            },
+                        },
+                        {
+                            [Op.and]: [
+                                {
+                                    createdAt: cursor.createdAt,
+                                },
+                                {
+                                    id: {
+                                        [Op.lt]: cursor.id,
+                                    },
+                                },
+                            ]
+                        },
+                    ]
+                }
+            );
+        }
+
+        const results = await Item.findAll({
+            include: [
+                {
+                    model: Unit,
+                    paranoid: false,
+                },
+                {
+                    model: Category,
+                    paranoid: false,
+                },
+            ],
+            where: {
+                [Op.and]: whereAnd,
+            },
+            order: [
+                ['createdAt', 'DESC'],
+                ['id', 'DESC'],
+            ],
+            limit: 100,
         });
 
         res.status(200).json({
@@ -163,12 +271,17 @@ router.get('/:id', async function (req: Request, res: Response, next: NextFuncti
 
 router.get('/:id/histories', adminRequiredMiddleware, async function (req: Request, res: Response, next: NextFunction) {
     try {
-        let where: WhereOptions<ItemHistoryAttributes> = {
-            id: req.params.id,
-        };
+        let whereAnd: any[] = [];
+        whereAnd.push(
+            {
+                id: req.params.id,
+            }
+        );
 
         const count = await ItemHistory.count({
-            where: where,
+            where: {
+                [Op.and]: whereAnd,
+            },
         });
 
         const cursorQuery = req.query.cursor as string;
@@ -181,16 +294,19 @@ router.get('/:id/histories', adminRequiredMiddleware, async function (req: Reque
                 },
             );
 
-            where = {
-                ...where,
-                historyId: {
-                    [Op.lt]: cursor.historyId,
-                },
-            };
+            whereAnd.push(
+                {
+                    historyId: {
+                        [Op.lt]: cursor.historyId,
+                    },
+                }
+            );
         }
 
         const results = await ItemHistory.findAll({
-            where: where,
+            where: {
+                [Op.and]: whereAnd,
+            },
             include: [
                 {
                     model: Unit,

@@ -4,6 +4,7 @@ import {
 import {
     Box,
     Button,
+    InputAdornment,
     LinearProgress,
     Link,
     Stack,
@@ -39,10 +40,16 @@ import {
 } from './Transactions';
 import fileDownload from 'js-file-download';
 import { AuthContext } from '../Context';
+import { useSnackbar } from 'notistack';
+import {
+    Add as AddIcon,
+    Search as SearchIcon
+} from '@mui/icons-material';
 
 export default function Index() {
     const navigate = useNavigate();
     const location = useLocation();
+    const { enqueueSnackbar, closeSnackbar } = useSnackbar();
 
     const [authContext,] = React.useContext(AuthContext);
 
@@ -60,7 +67,7 @@ export default function Index() {
         const _date = (date !== null && date.isValid) ? date.toISO() : null;
         if (_date === null) return;
 
-        const result = await axios.get<never, AxiosResponse<any>>(
+        await axios.get<any>(
             `/api${location.pathname}/export`,
             {
                 params: {
@@ -69,16 +76,20 @@ export default function Index() {
                 responseType: 'blob',
             },
         )
-            .then(result => result.data);
-
-        const fileName = (date !== null && date.isValid) ? date.toISODate() : '';
-        fileDownload(result, fileName, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+            .then(result => result.data)
+            .then(result => {
+                const fileName = (date !== null && date.isValid) ? date.toISODate() : '';
+                fileDownload(result, fileName, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+            })
+            .catch(error => {
+                enqueueSnackbar('Export failed', { variant: 'error' });
+            });
     }
 
-    const queryInTransactions = React.useMemo(
+    const queryTransactions = React.useMemo(
         () =>
             debounce(
-                (
+                async (
                     request: {
                         input: string;
                         date: string | null;
@@ -86,10 +97,13 @@ export default function Index() {
                     startCallback: () => void,
                     callback: (results: any) => void,
                     errorCallback: () => void,
+                    finallyCallback: () => void,
                     cancelToken: CancelToken,
                 ) => {
                     startCallback();
-                    axios.get<never, AxiosResponse<any>>(
+                    await axios.get<
+                        { count: number; results: Transaction[]; }
+                    >(
                         `/api${location.pathname}`,
                         {
                             params: {
@@ -97,20 +111,18 @@ export default function Index() {
                                 date: request.date,
                             },
                             cancelToken: cancelToken,
-                        },
-                    )
+                        })
                         .then(result => result.data)
-                        .then(
-                            (data) => {
-                                callback(data);
-                            },
-                            // Note: it's important to handle errors here
-                            // instead of a catch() block so that we don't swallow
-                            // exceptions from actual bugs in components.
-                            (error) => {
-                                errorCallback();
-                            }
-                        );
+                        .then(data => {
+                            callback(data);
+                        })
+                        .catch(error => {
+                            if (axios.isCancel(error)) return;
+                            errorCallback();
+                        })
+                        .finally(() => {
+                            finallyCallback();
+                        });
                 },
                 200,
             ),
@@ -131,7 +143,7 @@ export default function Index() {
         }
 
         const cancelTokenSource = axios.CancelToken.source();
-        queryInTransactions(
+        queryTransactions(
             {
                 input: search,
                 date: (date !== null && date.isValid) ? date.toISO() : null,
@@ -141,7 +153,7 @@ export default function Index() {
                 setTransactions([]);
                 setLoading(true);
             },
-            (data: any) => {
+            data => {
                 setCount(data.count);
                 setTransactions(data.results);
                 if (data.results.length === data.count) {
@@ -151,7 +163,9 @@ export default function Index() {
                 } else {
                     setCursor(null);
                 }
-                setLoading(false);
+            },
+            () => {
+                enqueueSnackbar('Error loading data', { variant: 'error' });
             },
             () => {
                 setLoading(false);
@@ -161,13 +175,15 @@ export default function Index() {
         return () => {
             cancelTokenSource.cancel();
         };
-    }, [queryInTransactions, search, date]);
+    }, [queryTransactions, search, date]);
 
-    function handleLoadMoreClick() {
+    async function handleLoadMoreClick() {
         setLoading(true);
         const source = axios.CancelToken.source();
         cancelTokenSourceRef.current = source;
-        axios.get<never, AxiosResponse<any>>(
+        await axios.get<
+            { count: number; results: Transaction[]; }
+        >(
             `/api${location.pathname}`,
             {
                 params: {
@@ -176,42 +192,40 @@ export default function Index() {
                     cursor: cursor,
                 },
                 cancelToken: source.token,
-            },
-        )
+            })
             .then(result => result.data)
-            .then(
-                (data) => {
-                    setCount(data.count);
-                    const newTransactions = [...transactions, ...data.results];
-                    setTransactions(newTransactions);
-                    if (newTransactions.length === data.count) {
-                        setCursor(null);
-                    } else if (data.results.length !== 0) {
-                        setCursor(data.results[data.results.length - 1].id);
-                    } else {
-                        setCursor(null);
-                    }
-                    setLoading(false);
-                },
-                // Note: it's important to handle errors here
-                // instead of a catch() block so that we don't swallow
-                // exceptions from actual bugs in components.
-                (error) => {
-                    setLoading(false);
+            .then(data => {
+                setCount(data.count);
+                const newTransactions = [...transactions, ...data.results];
+                setTransactions(newTransactions);
+                if (newTransactions.length === data.count) {
+                    setCursor(null);
+                } else if (data.results.length !== 0) {
+                    setCursor(data.results[data.results.length - 1].id);
+                } else {
+                    setCursor(null);
                 }
-            );
+            })
+            .catch(error => {
+                if (axios.isCancel(error)) return;
+                enqueueSnackbar('Error loading data', { variant: 'error' });
+            })
+            .finally(() => {
+                setLoading(false);
+            });
     }
 
     return (
-        <Stack spacing={2}
+        <Stack
             sx={{
-                marginY: 2
-            }}>
+                boxSizing: 'border-box',
+                flex: '1 1 auto',
+            }}
+        >
             <Box
                 sx={{
                     display: 'flex',
-                    justifyContent: 'flex-start',
-                    marginX: 2,
+                    padding: 2,
                 }}
             >
                 <Stack direction="row" spacing={2}>
@@ -223,6 +237,11 @@ export default function Index() {
                         onChange={(event) => { setSearch(event.target.value); }}
                         InputProps={{
                             type: 'search',
+                            startAdornment: (
+                                <InputAdornment position="start">
+                                    <SearchIcon />
+                                </InputAdornment>
+                            ),
                         }}
                     />
                     <DesktopDatePicker
@@ -266,8 +285,17 @@ export default function Index() {
                     }
                 </Stack>
             </Box>
-            <TableContainer>
-                <Table sx={{ minWidth: 650 }} size="small" >
+            <TableContainer
+                sx={{
+                    flex: '1 1 auto',
+                    overflowY: 'scroll',
+                    minHeight: '360px',
+                }}
+            >
+                <Table
+                    size="small"
+                    stickyHeader
+                >
                     <TableHead>
                         <TableRow>
                             <TableCell>Type</TableCell>
@@ -310,7 +338,10 @@ export default function Index() {
                                     row.InTransaction &&
                                     <React.Fragment>
                                         <TableCell>
-                                            <Typography fontFamily='monospace'>
+                                            <Typography
+                                                fontFamily='monospace'
+                                                variant='body2'
+                                            >
                                                 In
                                             </Typography>
                                         </TableCell>
@@ -322,7 +353,10 @@ export default function Index() {
                                                     to={`/in-transactions/${row.inTransaction}`}
                                                     color={'text.primary'}
                                                 >
-                                                    <Typography fontFamily='monospace'>
+                                                    <Typography
+                                                        fontFamily='monospace'
+                                                        variant='body2'
+                                                    >
                                                         {row.inTransaction.substring(0, 8)}
                                                     </Typography>
                                                 </Link>
@@ -338,7 +372,10 @@ export default function Index() {
                                         <TableCell align="right">{row.InTransaction.dateOfDeliveryReceipt !== null ? DateTime.fromISO(row.InTransaction.dateOfDeliveryReceipt).toLocal().toLocaleString(DateTime.DATE_SHORT) : ''}</TableCell>
                                         <TableCell align="right">{row.InTransaction.dateReceived !== null ? DateTime.fromISO(row.InTransaction.dateReceived).toLocal().toLocaleString(DateTime.DATE_SHORT) : ''}</TableCell>
                                         <TableCell align="right">
-                                            <Typography fontFamily='monospace'>
+                                            <Typography
+                                                fontFamily='monospace'
+                                                variant='body2'
+                                            >
                                                 {row.InTransaction.void.toString()}
                                             </Typography>
                                         </TableCell>
@@ -348,7 +385,10 @@ export default function Index() {
                                     row.OutTransaction &&
                                     <React.Fragment>
                                         <TableCell>
-                                            <Typography fontFamily='monospace'>
+                                            <Typography
+                                                fontFamily='monospace'
+                                                variant='body2'
+                                            >
                                                 Out
                                             </Typography>
                                         </TableCell>
@@ -360,7 +400,10 @@ export default function Index() {
                                                     to={`/out-transactions/${row.outTransaction}`}
                                                     color={'text.primary'}
                                                 >
-                                                    <Typography fontFamily='monospace'>
+                                                    <Typography
+                                                        fontFamily='monospace'
+                                                        variant='body2'
+                                                    >
                                                         {row.outTransaction.substring(0, 8)}
                                                     </Typography>
                                                 </Link>
@@ -380,7 +423,10 @@ export default function Index() {
                                             }}
                                         ></TableCell>
                                         <TableCell align="right">
-                                            <Typography fontFamily='monospace'>
+                                            <Typography
+                                                fontFamily='monospace'
+                                                variant='body2'
+                                            >
                                                 {row.OutTransaction.void.toString()}
                                             </Typography>
                                         </TableCell>

@@ -5,7 +5,7 @@ import {
     Link as RouterLink,
 } from 'react-router-dom';
 import TextField from '@mui/material/TextField';
-import axios, { AxiosResponse } from 'axios';
+import axios, { AxiosResponse, CancelToken } from 'axios';
 import LoadingButton from '@mui/lab/LoadingButton';
 import SaveIcon from '@mui/icons-material/Save';
 import Box from '@mui/system/Box';
@@ -15,10 +15,12 @@ import { Breadcrumbs, Dialog, Link, Stack, Typography } from '@mui/material';
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
 import { ApiCreateItem, Category, CreateItem, Unit } from './Items';
+import { useSnackbar } from 'notistack';
 
 export default function Create() {
     const navigate = useNavigate();
     const location = useLocation();
+    const { enqueueSnackbar, closeSnackbar } = useSnackbar();
 
     const [locked, setLocked] = React.useState(false);
 
@@ -58,43 +60,52 @@ export default function Create() {
                 .required('Required'),
         }),
         onSubmit: async values => {
-            try {
-                setLocked(true);
-
-                const result = await axios.post<
-                    { id: string; },
-                    AxiosResponse<{ id: string; }>,
-                    ApiCreateItem
-                >(
-                    `/api${location.pathname}/..`,
-                    {
-                        name: values.name,
-                        safetyStock: values.safetyStock,
-                        stock: values.stock,
-                        remarks: values.remarks,
-                        unit: values.Unit!.id!,
-                        category: values.Category!.id!,
-                    },
-                )
-                    .then(result => result.data);
-
-                navigate(`../${result}`, { replace: true });
-            } catch (error) {
-
-            } finally {
-                setLocked(false);
-            }
+            setLocked(true);
+            await axios.post<
+                { id: string; },
+                AxiosResponse<{ id: string; }>,
+                ApiCreateItem
+            >(
+                `/api${location.pathname}/..`,
+                {
+                    name: values.name,
+                    safetyStock: values.safetyStock,
+                    stock: values.stock,
+                    remarks: values.remarks,
+                    unit: values.Unit!.id!,
+                    category: values.Category!.id!,
+                })
+                .then(result => result.data)
+                .then(result => {
+                    navigate(`../${result}`, { replace: true });
+                    enqueueSnackbar('Create item successful', { variant: 'success' });
+                })
+                .catch(error => {
+                    enqueueSnackbar('Create item failed', { variant: 'error' });
+                    if (error.response) {
+                        const data = error.response.data;
+                        for (const e of data.errors) {
+                            formik.setFieldError(e.path, e.message);
+                        }
+                    }
+                })
+                .finally(() => {
+                    setLocked(false);
+                });
         },
     });
 
     const queryUnits = React.useMemo(
         () =>
             throttle(
-                (
+                async (
                     request: { input: string; },
-                    callback: (results?: readonly Unit[]) => void,
+                    callback: (results: Unit[]) => void,
+                    cancelToken: CancelToken,
                 ) => {
-                    axios.get<{ count: number; results: Unit[]; }>(
+                    await axios.get<
+                        { count: number; results: Unit[]; }
+                    >(
                         `/api/units`,
                         {
                             params: {
@@ -103,20 +114,12 @@ export default function Create() {
                                     showDeleted: false,
                                 },
                             },
-                        },
-                    )
+                            cancelToken: cancelToken,
+                        })
                         .then(result => result.data)
-                        .then(
-                            (data) => {
-                                callback(data.results);
-                            },
-                            // Note: it's important to handle errors here
-                            // instead of a catch() block so that we don't swallow
-                            // exceptions from actual bugs in components.
-                            (error) => {
-
-                            }
-                        );
+                        .then(data => {
+                            callback(data.results);
+                        });
                 },
                 200,
             ),
@@ -124,16 +127,17 @@ export default function Create() {
     );
 
     React.useEffect(() => {
-        let active = true;
+        const cancelTokenSource = axios.CancelToken.source();
 
         if (unitInputValue === '') {
             setUnitOptions(formik.values.Unit ? [formik.values.Unit] : []);
-            return undefined;
+            return;
         }
 
-        queryUnits({ input: unitInputValue }, (results?: readonly Unit[]) => {
-            if (active) {
-                let newOptions: readonly Unit[] = [];
+        queryUnits(
+            { input: unitInputValue },
+            (results: Unit[]) => {
+                let newOptions: Unit[] = [];
 
                 if (formik.values.Unit) {
                     newOptions = [formik.values.Unit];
@@ -144,22 +148,26 @@ export default function Create() {
                 }
 
                 setUnitOptions(newOptions);
-            }
-        });
+            },
+            cancelTokenSource.token,
+        );
 
         return () => {
-            active = false;
+            cancelTokenSource.cancel();
         };
     }, [formik.values.Unit, unitInputValue, queryUnits]);
 
     const queryCategories = React.useMemo(
         () =>
             throttle(
-                (
+                async (
                     request: { input: string; },
-                    callback: (results?: readonly Category[]) => void,
+                    callback: (results: Category[]) => void,
+                    cancelToken: CancelToken,
                 ) => {
-                    axios.get<{ count: number; results: Category[]; }>(
+                    await axios.get<
+                        { count: number; results: Category[]; }
+                    >(
                         `/api/categories`,
                         {
                             params: {
@@ -168,20 +176,12 @@ export default function Create() {
                                     showDeleted: false,
                                 },
                             },
-                        },
-                    )
+                            cancelToken: cancelToken,
+                        })
                         .then(result => result.data)
-                        .then(
-                            (data) => {
-                                callback(data.results);
-                            },
-                            // Note: it's important to handle errors here
-                            // instead of a catch() block so that we don't swallow
-                            // exceptions from actual bugs in components.
-                            (error) => {
-
-                            }
-                        );
+                        .then(data => {
+                            callback(data.results);
+                        });
                 },
                 200,
             ),
@@ -189,16 +189,17 @@ export default function Create() {
     );
 
     React.useEffect(() => {
-        let active = true;
+        const cancelTokenSource = axios.CancelToken.source();
 
         if (categoryInputValue === '') {
             setCategoryOptions(formik.values.Category ? [formik.values.Category] : []);
-            return undefined;
+            return;
         }
 
-        queryCategories({ input: categoryInputValue }, (results?: readonly Category[]) => {
-            if (active) {
-                let newOptions: readonly Category[] = [];
+        queryCategories(
+            { input: categoryInputValue },
+            (results: Category[]) => {
+                let newOptions: Category[] = [];
 
                 if (formik.values.Category) {
                     newOptions = [formik.values.Category];
@@ -209,25 +210,26 @@ export default function Create() {
                 }
 
                 setCategoryOptions(newOptions);
-            }
-        });
+            },
+            cancelTokenSource.token,
+        );
 
         return () => {
-            active = false;
+            cancelTokenSource.cancel();
         };
     }, [formik.values.Category, categoryInputValue, queryCategories]);
 
     return (
-        <Stack spacing={2}
+        <Stack
             sx={{
-                marginY: 2
+                boxSizing: 'border-box',
+                flex: '1 1 auto',
             }}
         >
             <Box
                 sx={{
                     display: 'flex',
-                    justifyContent: 'flex-start',
-                    marginX: 2,
+                    padding: 2,
                 }}
             >
                 <Stack direction="row" spacing={2}>

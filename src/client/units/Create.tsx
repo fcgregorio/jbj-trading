@@ -21,10 +21,12 @@ import {
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
 import { ApiCreateUnit, CreateUnit } from './Units';
+import { useSnackbar } from 'notistack';
 
 export default function Create() {
     const navigate = useNavigate();
     const location = useLocation();
+    const { enqueueSnackbar, closeSnackbar } = useSnackbar();
 
     const [locked, setLocked] = React.useState(false);
 
@@ -37,41 +39,47 @@ export default function Create() {
                 .required('Required'),
         }),
         onSubmit: async values => {
-            try {
-                setLocked(true);
-
-                const result = await axios.post<
-                    { id: string; },
-                    AxiosResponse<{ id: string; }>,
-                    ApiCreateUnit
-                >(
-                    `/api${location.pathname}/..`,
-                    {
-                        name: values.name,
-                    },
-                )
-                    .then(result => result.data);
-
-                navigate(`../${result}`, { replace: true });
-            } catch (error) {
-
-            } finally {
-                setLocked(false);
-            }
+            setLocked(true);
+            await axios.post<
+                { id: string; },
+                AxiosResponse<{ id: string; }>,
+                ApiCreateUnit
+            >(
+                `/api${location.pathname}/..`,
+                {
+                    name: values.name,
+                })
+                .then(result => result.data)
+                .then(result => {
+                    navigate(`../${result}`, { replace: true });
+                    enqueueSnackbar('Create unit successful', { variant: 'success' });
+                })
+                .catch(error => {
+                    enqueueSnackbar('Create unit failed', { variant: 'error' });
+                    if (error.response) {
+                        const data = error.response.data;
+                        for (const e of data.errors) {
+                            formik.setFieldError(e.path, e.message);
+                        }
+                    }
+                })
+                .finally(() => {
+                    setLocked(false);
+                });
         },
     });
 
     return (
-        <Stack spacing={2}
+        <Stack
             sx={{
-                marginY: 2
+                boxSizing: 'border-box',
+                flex: '1 1 auto',
             }}
         >
             <Box
                 sx={{
                     display: 'flex',
-                    justifyContent: 'flex-start',
-                    marginX: 2,
+                    padding: 2,
                 }}
             >
                 <Stack direction="row" spacing={2}>

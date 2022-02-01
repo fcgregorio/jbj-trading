@@ -17,11 +17,14 @@ import { AuthContext } from '../Context';
 import { DeleteDialogButton } from '../DeleteDialogButton';
 import { RestoreDialogButton } from '../RestoreDialogButton';
 import { Unit, UnitHistory } from './Units';
+import { useSnackbar } from 'notistack';
+import { useAsyncEffect } from 'use-async-effect';
 
 function History() {
     const location = useLocation();
     const navigate = useNavigate();
     const params = useParams();
+    const { enqueueSnackbar, closeSnackbar } = useSnackbar();
 
     const [loading, setLoading] = React.useState(false);
     const [cursor, setCursor] = React.useState<number | null>(null);
@@ -29,167 +32,172 @@ function History() {
     const [count, setCount] = React.useState<number | null>(null);
     const [unitHistories, setUnitHistories] = React.useState<UnitHistory[]>([]);
 
-    React.useEffect(() => {
+    useAsyncEffect(async isActive => {
         setLoading(true);
-        axios.get<{ count: number; results: UnitHistory[]; }>(`/api${location.pathname}/histories`)
+        await axios.get<
+            { count: number; results: UnitHistory[]; }
+        >(
+            `/api${location.pathname}/histories`)
             .then(result => result.data)
-            .then(
-                (data) => {
-                    setCount(data.count);
-                    setUnitHistories(data.results);
-                    if (data.results.length === data.count) {
-                        setCursor(null);
-                    } else if (data.results.length !== 0) {
-                        setCursor(data.results[data.results.length - 1].historyId);
-                    } else {
-                        setCursor(null);
-                    }
-                    setLoading(false);
-                },
-                // Note: it's important to handle errors here
-                // instead of a catch() block so that we don't swallow
-                // exceptions from actual bugs in components.
-                (error) => {
-                    setLoading(false);
+            .then(data => {
+                setCount(data.count);
+                setUnitHistories(data.results);
+                if (data.results.length === data.count) {
+                    setCursor(null);
+                } else if (data.results.length !== 0) {
+                    setCursor(data.results[data.results.length - 1].historyId);
+                } else {
+                    setCursor(null);
                 }
-            )
+            })
+            .catch(error => {
+                enqueueSnackbar('Error loading data', { variant: 'error' });
+            })
             .finally(() => {
                 setLoading(false);
             });
     }, [location.pathname]);
 
-    function handleLoadMoreClick() {
+    async function handleLoadMoreClick() {
         setLoading(true);
         const source = axios.CancelToken.source();
         cancelTokenSourceRef.current = source;
-        axios.get<{ count: number; results: UnitHistory[]; }>(
+        await axios.get<
+            { count: number; results: UnitHistory[]; }
+        >(
             `/api${location.pathname}/histories`,
             {
                 params: {
                     cursor: cursor,
                 },
                 cancelToken: source.token,
-            },
-        )
+            })
             .then(result => result.data)
-            .then(
-                (data) => {
-                    setCount(data.count);
-                    const newUnitHistories = [...unitHistories, ...data.results];
-                    setUnitHistories(newUnitHistories);
-                    if (newUnitHistories.length === data.count) {
-                        setCursor(null);
-                    } else if (data.results.length !== 0) {
-                        setCursor(data.results[data.results.length - 1].historyId);
-                    } else {
-                        setCursor(null);
-                    }
-                    setLoading(false);
-                },
-                // Note: it's important to handle errors here
-                // instead of a catch() block so that we don't swallow
-                // exceptions from actual bugs in components.
-                (error) => {
-                    setLoading(false);
+            .then(data => {
+                setCount(data.count);
+                const newUnitHistories = [...unitHistories, ...data.results];
+                setUnitHistories(newUnitHistories);
+                if (newUnitHistories.length === data.count) {
+                    setCursor(null);
+                } else if (data.results.length !== 0) {
+                    setCursor(data.results[data.results.length - 1].historyId);
+                } else {
+                    setCursor(null);
                 }
-            );
+            })
+            .catch(error => {
+                enqueueSnackbar('Error loading data', { variant: 'error' });
+            })
+            .finally(() => {
+                setLoading(false);
+            });
     }
 
     return (
-        <Stack spacing={2}
+        <TableContainer
             sx={{
-                marginY: 2
-            }}>
-            <TableContainer>
-                <Table sx={{ minWidth: 650 }} size="small" >
-                    <TableHead>
+                flex: '1 1 auto',
+                overflowY: 'scroll',
+                minHeight: '360px',
+            }}
+        >
+            <Table
+                size="small"
+                stickyHeader
+            >
+                <TableHead>
+                    <TableRow>
+                        <TableCell>History ID</TableCell>
+                        <TableCell>History User</TableCell>
+                        <TableCell>Name</TableCell>
+                        <TableCell align="right">Created At</TableCell>
+                        <TableCell align="right">Updated At</TableCell>
+                        <TableCell align="right">Deleted At</TableCell>
+                    </TableRow>
+                </TableHead>
+                <TableBody>
+                    {count !== null &&
                         <TableRow>
-                            <TableCell>History ID</TableCell>
-                            <TableCell>History User</TableCell>
-                            <TableCell>Name</TableCell>
-                            <TableCell align="right">Created At</TableCell>
-                            <TableCell align="right">Updated At</TableCell>
-                            <TableCell align="right">Deleted At</TableCell>
+                            <TableCell
+                                colSpan={6}
+                                align='right'
+                                sx={{ background: 'rgba(0, 0, 0, 0.06)' }}
+                            >
+                                <Typography
+                                    fontFamily='monospace'
+                                    variant='overline'
+                                >
+                                    {count} {count === 1 ? 'item' : 'items'}
+                                </Typography>
+                            </TableCell>
                         </TableRow>
-                    </TableHead>
-                    <TableBody>
-                        {count !== null &&
-                            <TableRow>
-                                <TableCell
-                                    colSpan={6}
-                                    align='right'
-                                    sx={{ background: 'rgba(0, 0, 0, 0.06)' }}
+                    }
+                    {unitHistories.map((row: any) => (
+                        <TableRow
+                            key={row.id}
+                            sx={{
+                                '&:last-child td, &:last-child th': { border: 0 },
+                            }}
+                        >
+                            <TableCell>
+                                <Typography
+                                    fontFamily='monospace'
+                                    variant='body2'
                                 >
-                                    <Typography
-                                        fontFamily='monospace'
-                                        variant='overline'
+                                    {row.historyId}
+                                </Typography>
+                            </TableCell>
+                            <TableCell>
+                                <Tooltip title={row.historyUser} placement="right">
+                                    <Link
+                                        underline="none"
+                                        component={RouterLink}
+                                        to={`/users/${row.historyUser}`}
+                                        color={'text.primary'}
                                     >
-                                        {count} {count === 1 ? 'item' : 'items'}
-                                    </Typography>
-                                </TableCell>
-                            </TableRow>
-                        }
-                        {unitHistories.map((row: any) => (
-                            <TableRow
-                                key={row.id}
-                                sx={{
-                                    '&:last-child td, &:last-child th': { border: 0 },
-                                }}
-                            >
-                                <TableCell>
-                                    <Typography fontFamily='monospace'>
-                                        {row.historyId}
-                                    </Typography>
-                                </TableCell>
-                                <TableCell>
-                                    <Tooltip title={row.historyUser} placement="right">
-                                        <Link
-                                            underline="none"
-                                            component={RouterLink}
-                                            to={`/users/${row.historyUser}`}
-                                            color={'text.primary'}
+                                        <Typography
+                                            fontFamily='monospace'
+                                            variant='body2'
                                         >
-                                            <Typography fontFamily='monospace'>
-                                                {row.historyUser.substring(0, 8)}
-                                            </Typography>
-                                        </Link>
-                                    </Tooltip>
-                                </TableCell>
-                                <TableCell>{row.name}</TableCell>
-                                <TableCell align="right">{DateTime.fromISO(row.createdAt).toLocal().toLocaleString(DateTime.DATETIME_SHORT)}</TableCell>
-                                <TableCell align="right">{DateTime.fromISO(row.updatedAt).toLocal().toLocaleString(DateTime.DATETIME_SHORT)}</TableCell>
-                                <TableCell align="right">{row.deletedAt !== null ? DateTime.fromISO(row.deletedAt).toLocal().toLocaleString(DateTime.DATETIME_SHORT) : null}</TableCell>
-                            </TableRow>
-                        ))}
-                        {loading || (cursor &&
-                            <TableRow
-                                onClick={() => { handleLoadMoreClick(); }}
-                                sx={{ cursor: 'pointer' }}
+                                            {row.historyUser.substring(0, 8)}
+                                        </Typography>
+                                    </Link>
+                                </Tooltip>
+                            </TableCell>
+                            <TableCell>{row.name}</TableCell>
+                            <TableCell align="right">{DateTime.fromISO(row.createdAt).toLocal().toLocaleString(DateTime.DATETIME_SHORT)}</TableCell>
+                            <TableCell align="right">{DateTime.fromISO(row.updatedAt).toLocal().toLocaleString(DateTime.DATETIME_SHORT)}</TableCell>
+                            <TableCell align="right">{row.deletedAt !== null ? DateTime.fromISO(row.deletedAt).toLocal().toLocaleString(DateTime.DATETIME_SHORT) : null}</TableCell>
+                        </TableRow>
+                    ))}
+                    {loading || (cursor &&
+                        <TableRow
+                            onClick={() => { handleLoadMoreClick(); }}
+                            sx={{ cursor: 'pointer' }}
+                        >
+                            <TableCell
+                                colSpan={6}
+                                align='center'
+                                sx={{ background: 'rgba(0, 0, 0, 0.06)' }}
                             >
-                                <TableCell
-                                    colSpan={6}
-                                    align='center'
-                                    sx={{ background: 'rgba(0, 0, 0, 0.06)' }}
+                                <Typography
+                                    variant='button'
                                 >
-                                    <Typography
-                                        variant='button'
-                                    >
-                                        Load More
-                                    </Typography>
-                                </TableCell>
-                            </TableRow>
-                        )}
-                        {loading &&
-                            <TableRow>
-                                <TableCell colSpan={6} padding='none'>
-                                    <LinearProgress />
-                                </TableCell>
-                            </TableRow>
-                        }
-                    </TableBody>
-                </Table>
-            </TableContainer>
-        </Stack>
+                                    Load More
+                                </Typography>
+                            </TableCell>
+                        </TableRow>
+                    )}
+                    {loading &&
+                        <TableRow>
+                            <TableCell colSpan={6} padding='none'>
+                                <LinearProgress />
+                            </TableCell>
+                        </TableRow>
+                    }
+                </TableBody>
+            </Table>
+        </TableContainer>
     );
 }
 
@@ -197,69 +205,69 @@ export default function Show() {
     const navigate = useNavigate();
     const location = useLocation();
     const params = useParams();
+    const { enqueueSnackbar, closeSnackbar } = useSnackbar();
 
     const [authContext,] = React.useContext(AuthContext);
 
     const [loading, setLoading] = React.useState(false);
     const [unit, setUnit] = React.useState<Unit | null>(null);
 
-    React.useEffect(() => {
+    useAsyncEffect(async isActive => {
         setLoading(true);
-        axios.get<Unit>(`/api${location.pathname}`)
+        await axios.get<Unit>(`/api${location.pathname}`)
             .then(result => result.data)
-            .then(result => {
-                    setUnit(result);
-                }
-            )
+            .then(data => {
+                setUnit(data);
+            })
+            .catch(error => {
+                enqueueSnackbar('Error loading data', { variant: 'error' });
+            })
             .finally(() => {
                 setLoading(false);
             });
     }, [location.pathname]);
 
-    function handleEditUnit() {
-        navigate('edit');
-    }
-
-    function handleDestroyUnit() {
-        return axios.delete(`/api${location.pathname}`)
+    async function handleDestroyUnit() {
+        await axios.delete(`/api${location.pathname}`)
             .then(result => result.data)
             .then(result => {
-                    navigate('..', { replace: true });
-                }
-            )
-            .finally(() => {
-
+                navigate('/', { replace: true });
+                navigate(`../${params.unitID}`, { replace: true });
+                enqueueSnackbar('Destroy unit successful', { variant: 'success' });
+            })
+            .catch(error => {
+                enqueueSnackbar('Destroy unit failed', { variant: 'error' });
             });
     }
 
-    function handleRestoreUnit() {
-        return axios.put(`/api${location.pathname}/restore`)
+    async function handleRestoreUnit() {
+        await axios.put(`/api${location.pathname}/restore`)
             .then(result => result.data)
             .then(result => {
-                    navigate(`../${params.unitID}`, { replace: true });
-                }
-            )
-            .finally(() => {
-
+                navigate('/', { replace: true });
+                navigate(`../${params.unitID}`, { replace: true });
+                enqueueSnackbar('Restore unit successful', { variant: 'success' });
+            })
+            .catch(error => {
+                enqueueSnackbar('Restore unit failed', { variant: 'error' });
             });
     }
 
     return (
-        <Box>
+        <Stack
+            sx={{
+                boxSizing: 'border-box',
+                flex: '1 1 auto',
+            }}
+        >
             {loading ?
                 <LinearProgress />
                 :
-                <Stack
-                    spacing={2}
-                    sx={{
-                        marginY: 2
-                    }}
-                >
+                <React.Fragment>
                     <Box
                         sx={{
                             display: 'flex',
-                            justifyContent: 'flex-start',
-                            marginX: 2,
+                            padding: 2,
                         }}
                     >
                         <Stack
@@ -302,7 +310,8 @@ export default function Show() {
                                             <Button
                                                 startIcon={<EditIcon />}
                                                 variant="contained"
-                                                onClick={handleEditUnit}
+                                                component={RouterLink}
+                                                to={`edit`}
                                             >
                                                 Edit
                                             </Button>
@@ -380,14 +389,18 @@ export default function Show() {
                             {
                                 authContext?.user.admin &&
                                 <React.Fragment>
-                                    <Divider />
+                                    <Divider
+                                        sx={{
+                                            marginTop: 2,
+                                        }}
+                                    />
                                     <History />
                                 </React.Fragment>
                             }
                         </React.Fragment>
                     }
-                </Stack>
+                </React.Fragment>
             }
-        </Box>
+        </Stack >
     );
 };

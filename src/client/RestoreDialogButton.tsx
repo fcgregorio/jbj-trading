@@ -12,7 +12,7 @@ import { LoadingButton } from '@mui/lab';
 
 
 export interface RestoreDialogButtonProps {
-    handleRestore: () => Promise<any>;
+    handleRestore: () => Promise<void>;
 }
 
 export function RestoreDialogButton(props: RestoreDialogButtonProps) {

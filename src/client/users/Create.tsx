@@ -14,10 +14,12 @@ import {
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
 import { ApiCreateUser, CreateUser } from './Users';
+import { useSnackbar } from 'notistack';
 
 export default function Create() {
     const navigate = useNavigate();
     const location = useLocation();
+    const { enqueueSnackbar, closeSnackbar } = useSnackbar();
 
     const [locked, setLocked] = React.useState(false);
 
@@ -40,6 +42,8 @@ export default function Create() {
             admin: Yup.boolean()
                 .required('Required'),
             password: Yup.string()
+                .min(16, 'Must be at least 16 characters long')
+                .matches(/^[A-Za-z0-9]+$/, 'Can only contain lowercase letters, uppercase letters, and characters')
                 .required('Required'),
             passwordVerification: Yup.string()
                 .test('passwords-match', 'Passwords must match', function (value) {
@@ -48,45 +52,51 @@ export default function Create() {
                 }),
         }),
         onSubmit: async values => {
-            try {
-                setLocked(true);
-
-                const result = await axios.post<
-                    { id: string; },
-                    AxiosResponse<{ id: string; }>,
-                    ApiCreateUser
-                >(
-                    `/api${location.pathname}/..`,
-                    {
-                        username: values.username,
-                        firstName: values.firstName,
-                        lastName: values.lastName,
-                        admin: values.admin,
-                        password: values.password,
-                    },
-                )
-                    .then(result => result.data);
-
-                navigate(`../${result}`, { replace: true });
-            } catch (error) {
-
-            } finally {
-                setLocked(false);
-            }
+            setLocked(true);
+            await axios.post<
+                { id: string; },
+                AxiosResponse<{ id: string; }>,
+                ApiCreateUser
+            >(
+                `/api${location.pathname}/..`,
+                {
+                    username: values.username,
+                    firstName: values.firstName,
+                    lastName: values.lastName,
+                    admin: values.admin,
+                    password: values.password,
+                })
+                .then(result => result.data)
+                .then(result => {
+                    navigate(`../${result}`, { replace: true });
+                    enqueueSnackbar('Create user successful', { variant: 'success' });
+                })
+                .catch(error => {
+                    enqueueSnackbar('Create user failed', { variant: 'error' });
+                    if (error.response) {
+                        const data = error.response.data;
+                        for (const e of data.errors) {
+                            formik.setFieldError(e.path, e.message);
+                        }
+                    }
+                })
+                .finally(() => {
+                    setLocked(false);
+                });
         },
     });
 
     return (
-        <Stack spacing={2}
+        <Stack
             sx={{
-                marginY: 2
+                boxSizing: 'border-box',
+                flex: '1 1 auto',
             }}
         >
             <Box
                 sx={{
                     display: 'flex',
-                    justifyContent: 'flex-start',
-                    marginX: 2,
+                    padding: 2,
                 }}
             >
                 <Stack direction="row" spacing={2}>
