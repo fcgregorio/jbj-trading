@@ -2,6 +2,7 @@ import { NextFunction, Request, Response, Router } from 'express';
 import sequelize, { User, UserAttributes, UserHistory, UserHistoryAttributes } from '../../sequelize';
 import { loginRequiredMiddleware, adminRequiredMiddleware } from '../../middleware/auth';
 import { Op, ValidationError, ValidationErrorItem, WhereOptions } from 'sequelize';
+import { AppValidationError, AppValidationErrorItem } from '../../errors';
 
 const router = Router();
 router.use(loginRequiredMiddleware);
@@ -11,19 +12,17 @@ router.post('/', adminRequiredMiddleware, async function (req: Request, res: Res
         const result = await sequelize.transaction(async (t) => {
             if (typeof req.body.password === 'string') {
                 if (req.body.password.length < 16) {
-                    throw new ValidationError(
-                        'ValidationError',
+                    throw new AppValidationError(
                         [
-                            new ValidationErrorItem('Must be at least 16 characters long', undefined, 'password'),
+                            new AppValidationErrorItem('Must be at least 16 characters long', 'password'),
                         ]
                     );
                 }
 
                 if (req.body.password.match("^[A-Za-z0-9]+$")) {
-                    throw new ValidationError(
-                        'ValidationError',
+                    throw new AppValidationError(
                         [
-                            new ValidationErrorItem('Can only contain lowercase letters, uppercase letters, and characters', undefined, 'password'),
+                            new AppValidationErrorItem('Can only contain lowercase letters, uppercase letters, and characters', 'password'),
                         ]
                     );
                 }
@@ -263,19 +262,17 @@ router.put('/:id/change-password', adminRequiredMiddleware, async function (req:
         const result = await sequelize.transaction(async (t) => {
             if (typeof req.body.password === 'string') {
                 if (req.body.password.length < 16) {
-                    throw new ValidationError(
-                        'ValidationError',
+                    throw new AppValidationError(
                         [
-                            new ValidationErrorItem('Must be at least 16 characters long', undefined, 'password'),
+                            new AppValidationErrorItem('Must be at least 16 characters long', 'password'),
                         ]
                     );
                 }
 
                 if (req.body.password.match("^[A-Za-z0-9]+$")) {
-                    throw new ValidationError(
-                        'ValidationError',
+                    throw new AppValidationError(
                         [
-                            new ValidationErrorItem('Can only contain lowercase letters, uppercase letters, and characters', undefined, 'password'),
+                            new AppValidationErrorItem('Can only contain lowercase letters, uppercase letters, and characters', 'password'),
                         ]
                     );
                 }

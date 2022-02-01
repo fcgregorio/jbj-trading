@@ -4,6 +4,7 @@ import { loginRequiredMiddleware, adminRequiredMiddleware } from '../../middlewa
 import { EmptyResultError, Op, QueryTypes, ValidationError, ValidationErrorItem, WhereOptions } from 'sequelize';
 import { DateTime } from 'luxon';
 import * as _ from 'lodash';
+import { AppValidationError, AppValidationErrorItem } from '../../errors';
 
 const router = Router();
 router.use(loginRequiredMiddleware);
@@ -38,12 +39,10 @@ router.post('/', async function (req: Request, res: Response, next: NextFunction
             );
 
             if (req.body.outTransfers.length == 0) {
-                throw new ValidationError(
-                    'ValidationError',
+                throw new AppValidationError(
                     [
-                        new ValidationErrorItem(
+                        new AppValidationErrorItem(
                             'Out-Transfers cannot be empty',
-                            undefined,
                             'OutTransfers',
                         ),
                     ],
@@ -63,12 +62,10 @@ router.post('/', async function (req: Request, res: Response, next: NextFunction
                     );
                 } catch (error) {
                     if (error instanceof EmptyResultError) {
-                        throw new ValidationError(
-                            error.message,
+                        throw new AppValidationError(
                             [
-                                new ValidationErrorItem(
+                                new AppValidationErrorItem(
                                     `${element.item.slice(0, 8)}: Item ID: Does not exist`,
-                                    undefined,
                                     'OutTransfers',
                                 ),
                             ],
@@ -95,12 +92,10 @@ router.post('/', async function (req: Request, res: Response, next: NextFunction
                     );
                 } catch (error) {
                     if (error instanceof ValidationError) {
-                        throw new ValidationError(
-                            error.message,
+                        throw new AppValidationError(
                             error.errors.map(item => {
-                                return new ValidationErrorItem(
+                                return new AppValidationErrorItem(
                                     `${element.item.slice(0, 8)}: ${_.startCase(item.path!)}: ${item.message}`,
-                                    undefined,
                                     'OutTransfers',
                                 );
                             }),
@@ -151,12 +146,10 @@ router.post('/', async function (req: Request, res: Response, next: NextFunction
                     );
                 } catch (error) {
                     if (error instanceof ValidationError) {
-                        throw new ValidationError(
-                            error.message,
+                        throw new AppValidationError(
                             error.errors.map(item => {
-                                return new ValidationErrorItem(
+                                return new AppValidationErrorItem(
                                     `${element.item.slice(0, 8)}: ${_.startCase(item.path!)}: ${item.message === 'Must be non-negative' ? 'Not enough available' : item.message}`,
-                                    undefined,
                                     'OutTransfers'
                                 );
                             }),
@@ -401,12 +394,10 @@ router.put('/:id', adminRequiredMiddleware, async function (req: Request, res: R
             );
 
             if (outTransaction.void && !req.body.void) {
-                throw new ValidationError(
-                    'ValidationError',
+                throw new AppValidationError(
                     [
-                        new ValidationErrorItem(
+                        new AppValidationErrorItem(
                             'Out-Transaction already void',
-                            undefined,
                             'void',
                         ),
                     ],
@@ -462,11 +453,9 @@ router.put('/:id', adminRequiredMiddleware, async function (req: Request, res: R
                         );
                     } catch (error) {
                         if (error instanceof EmptyResultError) {
-                            throw new ValidationError(
-                                error.message,
+                            throw new AppValidationError(
                                 [
-                                    new ValidationErrorItem(`${outTransfer.item.slice(0, 8)}: Item ID: Does not exist`,
-                                        undefined,
+                                    new AppValidationErrorItem(`${outTransfer.item.slice(0, 8)}: Item ID: Does not exist`,
                                         'OutTransfers',
                                     ),
                                 ],
@@ -538,12 +527,10 @@ router.put('/:id', adminRequiredMiddleware, async function (req: Request, res: R
                         );
                     } catch (error) {
                         if (error instanceof ValidationError) {
-                            throw new ValidationError(
-                                error.message,
+                            throw new AppValidationError(
                                 error.errors.map(item => {
-                                    return new ValidationErrorItem(
+                                    return new AppValidationErrorItem(
                                         `${outTransfer.item.slice(0, 8)}: ${_.startCase(item.path!)}: ${item.message === 'Must be non-negative' ? 'Not enough available' : item.message}`,
-                                        undefined,
                                         'OutTransfers'
                                     );
                                 }),
