@@ -237,7 +237,6 @@ export default function Index() {
                                         flex: '1 1 auto',
                                         userSelect: 'none',
                                     }}
-                                    color="inherit"
                                     variant="subtitle1"
                                     component="div"
                                 >
