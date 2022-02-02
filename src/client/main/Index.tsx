@@ -9,6 +9,7 @@ import Toolbar from '@mui/material/Toolbar';
 import Typography from '@mui/material/Typography';
 import * as React from 'react';
 import {
+    matchPath,
     Outlet,
     useLocation,
     useNavigate
@@ -138,7 +139,7 @@ export default function Index() {
                             authContext?.user.admin &&
                             <React.Fragment>
                                 <ListItemButton
-                                    selected={location.pathname === '/dashboard'}
+                                    selected={matchPath('/dashboard/*', location.pathname) !== null}
                                     key={'Dashboard'}
                                     component="a"
                                     href="/dashboard"
@@ -155,7 +156,7 @@ export default function Index() {
                             </React.Fragment>
                         }
                         <ListItemButton
-                            selected={location.pathname === '/transactions'}
+                            selected={matchPath('/transactions/*', location.pathname) !== null}
                             key={'Transactions'}
                             component="a"
                             href="/transactions"
@@ -169,7 +170,7 @@ export default function Index() {
                             />
                         </ListItemButton>
                         <ListItemButton
-                            selected={location.pathname === '/in-transactions'}
+                            selected={matchPath('/in-transactions/*', location.pathname) !== null}
                             key={'In-Transactions'}
                             component="a"
                             href="/in-transactions"
@@ -184,7 +185,7 @@ export default function Index() {
                             />
                         </ListItemButton>
                         <ListItemButton
-                            selected={location.pathname === '/out-transactions'}
+                            selected={matchPath('/out-transactions/*', location.pathname) !== null}
                             key={'Out-Transactions'}
                             component="a"
                             href="/out-transactions"
@@ -200,7 +201,7 @@ export default function Index() {
                         </ListItemButton>
                         <Divider />
                         <ListItemButton
-                            selected={location.pathname === '/transfers'}
+                            selected={matchPath('/transfers/*', location.pathname) !== null}
                             key={'Transfers'}
                             component="a"
                             href="/transfers"
@@ -214,7 +215,7 @@ export default function Index() {
                             />
                         </ListItemButton>
                         <ListItemButton
-                            selected={location.pathname === '/in-transfers'}
+                            selected={matchPath('/in-transfers/*', location.pathname) !== null}
                             key={'In-Transfers'}
                             component="a"
                             href="/in-transfers"
@@ -229,7 +230,7 @@ export default function Index() {
                             />
                         </ListItemButton>
                         <ListItemButton
-                            selected={location.pathname === '/out-transfers'}
+                            selected={matchPath('/out-transfers/*', location.pathname) !== null}
                             key={'Out-Transfers'}
                             component="a"
                             href="/out-transfers"
@@ -245,7 +246,7 @@ export default function Index() {
                         </ListItemButton>
                         <Divider />
                         <ListItemButton
-                            selected={location.pathname === '/items'}
+                            selected={matchPath('/items/*', location.pathname) !== null}
                             key={'Items'}
                             component="a"
                             href="/items"
@@ -259,7 +260,7 @@ export default function Index() {
                             />
                         </ListItemButton>
                         <ListItemButton
-                            selected={location.pathname === '/units'}
+                            selected={matchPath('/units/*', location.pathname) !== null}
                             key={'Units'}
                             component="a"
                             href="/units"
@@ -273,7 +274,7 @@ export default function Index() {
                             />
                         </ListItemButton>
                         <ListItemButton
-                            selected={location.pathname === '/categories'}
+                            selected={matchPath('/categories/*', location.pathname) !== null}
                             key={'Categories'}
                             component="a"
                             href='/categories'
@@ -291,7 +292,7 @@ export default function Index() {
                             <React.Fragment>
                                 <Divider />
                                 <ListItemButton
-                                    selected={location.pathname === '/users'}
+                                    selected={matchPath('/users/*', location.pathname) !== null}
                                     key={'Users'}
                                     component="a"
                                     href="/users"
