@@ -284,7 +284,7 @@ export default function Show() {
                                 <Breadcrumbs>
                                     <Link
                                         underline="hover"
-                                        color="primaty"
+                                        color="primary"
                                         component={RouterLink}
                                         to='..'
                                     >
@@ -440,7 +440,7 @@ export default function Show() {
                                     >
                                         <Typography
                                             sx={{ flex: '1 1 auto' }}
-                                            color="inherit"
+                                            color="primary"
                                             variant="subtitle1"
                                             component="div"
                                         >
