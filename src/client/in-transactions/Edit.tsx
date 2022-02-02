@@ -157,7 +157,7 @@ export default function Edit() {
                                 <Breadcrumbs>
                                     <Link
                                         underline="hover"
-                                        color="primaty"
+                                        color="primary"
                                         component={RouterLink}
                                         to='..'
                                     >
@@ -165,7 +165,7 @@ export default function Edit() {
                                     </Link>
                                     <Link
                                         underline="hover"
-                                        color="primaty"
+                                        color="primary"
                                         component={RouterLink}
                                         to={`../${params.inTransactionID}`}
                                     >

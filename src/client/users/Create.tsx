@@ -104,7 +104,7 @@ export default function Create() {
                         <Breadcrumbs>
                             <Link
                                 underline="hover"
-                                color="primaty"
+                                color="primary"
                                 component={RouterLink}
                                 to='..'
                             >
