@@ -279,7 +279,7 @@ export default function Show() {
                                 <Breadcrumbs>
                                     <Link
                                         underline="hover"
-                                        color="inherit"
+                                        color="primaty"
                                         component={RouterLink}
                                         to='..'
                                     >

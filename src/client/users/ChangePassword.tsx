@@ -126,7 +126,7 @@ export default function ChangePassword() {
                                 <Breadcrumbs>
                                     <Link
                                         underline="hover"
-                                        color="inherit"
+                                        color="primaty"
                                         component={RouterLink}
                                         to='..'
                                     >
@@ -134,7 +134,7 @@ export default function ChangePassword() {
                                     </Link>
                                     <Link
                                         underline="hover"
-                                        color="inherit"
+                                        color="primaty"
                                         component={RouterLink}
                                         to={`../${params.userID}`}
                                     >
