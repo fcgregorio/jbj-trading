@@ -208,7 +208,7 @@ export function OutTransferStrip(props: OutTransferStripProps) {
                 variant="subtitle1"
                 component="div"
             >
-                Out-Transfers
+                Out-Transfers**
             </Typography>
             <Box
                 sx={{ marginLeft: 'auto' }}

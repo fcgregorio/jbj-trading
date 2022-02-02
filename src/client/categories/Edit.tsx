@@ -162,11 +162,18 @@ export default function Edit() {
                                 paddingX: 2,
                             }}
                         >
+                            <Typography
+                                variant='caption'
+                                // color='text.secondary'
+                                display='block'
+                            >
+                                * Required
+                            </Typography>
                             <TextField
                                 autoFocus
                                 margin="dense"
                                 id="name"
-                                label="Name"
+                                label="Name*"
                                 type="text"
                                 fullWidth
                                 variant="filled"

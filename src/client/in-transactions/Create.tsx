@@ -168,11 +168,18 @@ export default function Create() {
                     paddingX: 2,
                 }}
             >
+                <Typography
+                    variant='caption'
+                    // color='text.secondary'
+                    display='block'
+                >
+                    * Required<br />** Non-empty
+                </Typography>
                 <TextField
                     autoFocus
                     margin="dense"
                     id="supplier"
-                    label="Supplier"
+                    label="Supplier*"
                     type="text"
                     fullWidth
                     variant="filled"

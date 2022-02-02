@@ -144,11 +144,18 @@ export default function Create() {
                     paddingX: 2,
                 }}
             >
+                <Typography
+                    variant='caption'
+                    // color='text.secondary'
+                    display='block'
+                >
+                    * Required
+                </Typography>
                 <TextField
                     autoFocus
                     margin="dense"
                     id="username"
-                    label="Username"
+                    label="Username*"
                     type="text"
                     autoComplete='new-username'
                     fullWidth
@@ -162,7 +169,7 @@ export default function Create() {
                 <TextField
                     margin="dense"
                     id="firstName"
-                    label="First Name"
+                    label="First Name*"
                     type="text"
                     autoComplete='off'
                     fullWidth
@@ -176,7 +183,7 @@ export default function Create() {
                 <TextField
                     margin="dense"
                     id="lastName"
-                    label="Last Name"
+                    label="Last Name*"
                     type="text"
                     autoComplete='off'
                     fullWidth
@@ -206,7 +213,7 @@ export default function Create() {
                 <TextField
                     margin="dense"
                     id="password"
-                    label="Password"
+                    label="Password*"
                     type="password"
                     autoComplete='new-password'
                     fullWidth

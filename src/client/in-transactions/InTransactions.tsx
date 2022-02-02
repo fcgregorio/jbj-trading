@@ -213,7 +213,7 @@ export function InTransferStrip(props: InTransferStripProps) {
                 variant="subtitle1"
                 component="div"
             >
-                In-Transfers
+                In-Transfers**
             </Typography>
             <Box
                 sx={{ marginLeft: 'auto' }}

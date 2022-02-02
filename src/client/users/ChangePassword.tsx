@@ -179,11 +179,18 @@ export default function ChangePassword() {
                                 paddingX: 2,
                             }}
                         >
+                            <Typography
+                                variant='caption'
+                                // color='text.secondary'
+                                display='block'
+                            >
+                                * Required
+                            </Typography>
                             <TextField
                                 autoFocus
                                 margin="dense"
                                 id="password"
-                                label="Password"
+                                label="Password*"
                                 type="password"
                                 autoComplete='new-password'
                                 fullWidth

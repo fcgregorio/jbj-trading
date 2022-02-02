@@ -326,11 +326,18 @@ export default function Edit() {
                                 paddingX: 2,
                             }}
                         >
+                            <Typography
+                                variant='caption'
+                                // color='text.secondary'
+                                display='block'
+                            >
+                                * Required
+                            </Typography>
                             <TextField
                                 autoFocus
                                 margin="dense"
                                 id="name"
-                                label="Name"
+                                label="Name*"
                                 type="text"
                                 fullWidth
                                 variant="filled"
@@ -343,7 +350,7 @@ export default function Edit() {
                             <TextField
                                 margin="dense"
                                 id="safetyStock"
-                                label="Safety Stock"
+                                label="Safety Stock*"
                                 type="number"
                                 fullWidth
                                 variant="filled"
@@ -362,7 +369,7 @@ export default function Edit() {
                             <TextField
                                 margin="dense"
                                 id="stock"
-                                label="Stock"
+                                label="Stock*"
                                 type="number"
                                 fullWidth
                                 variant="filled"
@@ -412,7 +419,7 @@ export default function Edit() {
                                 renderInput={(params) => (
                                     <TextField
                                         {...params}
-                                        label="Unit"
+                                        label="Unit*"
                                         variant="filled"
                                         error={formik.touched.Unit && Boolean(formik.errors.Unit)}
                                         helperText={formik.touched.Unit && formik.errors.Unit}
@@ -440,7 +447,7 @@ export default function Edit() {
                                 renderInput={(params) => (
                                     <TextField
                                         {...params}
-                                        label="Category"
+                                        label="Category*"
                                         variant="filled"
                                         error={formik.touched.Category && Boolean(formik.errors.Category)}
                                         helperText={formik.touched.Category && formik.errors.Category}
