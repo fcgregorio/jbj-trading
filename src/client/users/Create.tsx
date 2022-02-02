@@ -42,7 +42,7 @@ export default function Create() {
             admin: Yup.boolean()
                 .required('Required'),
             password: Yup.string()
-                .min(16, 'Must be at least 16 characters long')
+                .min(10, 'Must be at least 10 characters long')
                 .matches(/^[A-Za-z0-9]+$/, 'Can only contain lowercase letters, uppercase letters, and characters')
                 .required('Required'),
             passwordVerification: Yup.string()

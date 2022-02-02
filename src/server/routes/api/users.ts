@@ -11,10 +11,10 @@ router.post('/', adminRequiredMiddleware, async function (req: Request, res: Res
     try {
         const result = await sequelize.transaction(async (t) => {
             if (typeof req.body.password === 'string') {
-                if (req.body.password.length < 16) {
+                if (req.body.password.length < 10) {
                     throw new AppValidationError(
                         [
-                            new AppValidationErrorItem('Must be at least 16 characters long', 'password'),
+                            new AppValidationErrorItem('Must be at least 10 characters long', 'password'),
                         ]
                     );
                 }
@@ -261,10 +261,10 @@ router.put('/:id/change-password', adminRequiredMiddleware, async function (req:
     try {
         const result = await sequelize.transaction(async (t) => {
             if (typeof req.body.password === 'string') {
-                if (req.body.password.length < 16) {
+                if (req.body.password.length < 10) {
                     throw new AppValidationError(
                         [
-                            new AppValidationErrorItem('Must be at least 16 characters long', 'password'),
+                            new AppValidationErrorItem('Must be at least 10 characters long', 'password'),
                         ]
                     );
                 }
