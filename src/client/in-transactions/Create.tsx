@@ -5,7 +5,9 @@ import {
 } from '@mui/lab';
 import {
     Box,
-    Breadcrumbs, Dialog, Link,
+    Breadcrumbs,
+    Dialog,
+    Link,
     Paper,
     Stack,
     Table,
@@ -15,25 +17,35 @@ import {
     TableHead,
     TableRow,
     TextField,
-    Tooltip,
     Typography,
 } from '@mui/material';
 import { red } from '@mui/material/colors';
 import axios, { AxiosResponse } from 'axios';
-import { isSafeInteger } from 'lodash';
+import { useFormik } from 'formik';
 import {
     DateTime
 } from 'luxon';
+import { useSnackbar } from 'notistack';
 import * as React from 'react';
 import {
-    useNavigate,
-    useLocation,
-    Link as RouterLink,
+    Link as RouterLink, useLocation, useNavigate
 } from 'react-router-dom';
-import { ApiCreateInTransaction, CreateInTransaction, InTransfer, InTransferStrip } from './InTransactions';
-import { useFormik } from 'formik';
 import * as Yup from 'yup';
-import { useSnackbar } from 'notistack';
+import { ApiCreateInTransaction, CreateInTransaction, InTransferStrip } from './InTransactions';
+import InTransfersList from './InTransfersList';
+
+// https://usehooks.com/usePrevious/
+function usePrevious<T>(value: T): T {
+    // The ref object is a generic container whose current property is mutable ...
+    // ... and can hold any value, similar to an instance property on a class
+    const ref: any = React.useRef<T>();
+    // Store current value in ref
+    React.useEffect(() => {
+        ref.current = value;
+    }, [value]); // Only re-run if value changes
+    // Return previous value (happens before update in useEffect above)
+    return ref.current;
+}
 
 export default function Create() {
     const navigate = useNavigate();
@@ -41,8 +53,6 @@ export default function Create() {
     const { enqueueSnackbar, closeSnackbar } = useSnackbar();
 
     const [locked, setLocked] = React.useState(false);
-
-    const [selectedInTransfer, setSelectedInTransfer] = React.useState<Readonly<InTransfer> | null>(null);
 
     const formik = useFormik<CreateInTransaction>({
         initialValues: {
@@ -64,6 +74,13 @@ export default function Create() {
                 .nullable()
                 .typeError('Invalid Date'),
             InTransfers: Yup.array()
+                .of(
+                    Yup.object().shape({
+                        Item: Yup.object(),
+                        item: Yup.string().required('Required'),
+                        quantity: Yup.number().nullable().required('Required'),
+                    })
+                )
                 .min(1, 'Include at least 1 item')
                 .required('Required'),
         }),
@@ -86,7 +103,7 @@ export default function Create() {
                     }>((inTransfer) => {
                         return {
                             item: inTransfer.item,
-                            quantity: inTransfer.quantity,
+                            quantity: inTransfer.quantity!,
                         };
                     })
                 })
@@ -109,6 +126,14 @@ export default function Create() {
                 });
         },
     });
+
+    const prevTouchedInTransfers: any = usePrevious<any>(formik.touched.InTransfers);
+
+    React.useEffect(() => {
+        if (prevTouchedInTransfers !== undefined && formik.touched.InTransfers === undefined) {
+            formik.setFieldTouched('InTransfers', true, true);
+        }
+    }, [prevTouchedInTransfers, formik.touched.InTransfers]);
 
     return (
         <Stack
@@ -148,7 +173,7 @@ export default function Create() {
                     sx={{ marginLeft: 'auto' }}
                 >
                     <LoadingButton
-                        disabled={!formik.isValid || selectedInTransfer !== null}
+                        disabled={!formik.dirty || !formik.isValid}
                         loading={locked}
                         loadingPosition="start"
                         startIcon={<SaveIcon />}
@@ -242,8 +267,8 @@ export default function Create() {
                     <Paper
                         variant='outlined'
                         sx={{
-                            border: formik.touched.InTransfers && Boolean(formik.errors.InTransfers) ? 2 : 1,
-                            borderColor: formik.touched.InTransfers && Boolean(formik.errors.InTransfers) ? red[700] : 'rgba(0, 0, 0, 0.42)',
+                            border: formik.touched.InTransfers && Boolean(formik.errors.InTransfers) && typeof formik.errors.InTransfers === 'string' ? 2 : 1,
+                            borderColor: formik.touched.InTransfers && Boolean(formik.errors.InTransfers) && typeof formik.errors.InTransfers === 'string' ? red[700] : 'rgba(0, 0, 0, 0.42)',
                         }}
                     >
                         <InTransferStrip
@@ -261,7 +286,7 @@ export default function Create() {
                                 formik.setFieldValue('InTransfers', value);
                             }}
                             handleBlur={() => { formik.setFieldTouched('InTransfers', true, true); }}
-                            hasError={Boolean(formik.touched.InTransfers && Boolean(formik.errors.InTransfers))}
+                            hasError={Boolean(formik.touched.InTransfers && Boolean(formik.errors.InTransfers) && typeof formik.errors.InTransfers === 'string')}
                         />
                         {
                             Boolean(formik.values.InTransfers.length !== 0)
@@ -272,108 +297,22 @@ export default function Create() {
                                         <TableRow>
                                             <TableCell>Item ID</TableCell>
                                             <TableCell>Item Name</TableCell>
-                                            <TableCell align="right">Quantity</TableCell>
+                                            <TableCell align="right">Quantity*</TableCell>
                                             <TableCell>Item Unit</TableCell>
+                                            <TableCell></TableCell>
                                         </TableRow>
                                     </TableHead>
                                     <TableBody>
-                                        {formik.values.InTransfers.map((row: InTransfer) => (
-                                            <TableRow
-                                                onClick={() => {
-                                                    if (selectedInTransfer === null) {
-                                                        setSelectedInTransfer(row);
-                                                    }
-                                                }}
-                                                key={row.item}
-                                                sx={{ '&:last-child td, &:last-child th': { border: 0 }, cursor: 'pointer' }}>
-                                                <TableCell>
-                                                    <Tooltip title={row.item} placement="right">
-                                                        <Typography
-                                                            fontFamily='monospace'
-                                                            variant='body2'
-                                                        >
-                                                            {row.item.substring(0, 8)}
-                                                        </Typography>
-                                                    </Tooltip>
-                                                </TableCell>
-                                                <TableCell>{row.Item!.name}</TableCell>
-                                                <TableCell align="right">
-                                                    {
-                                                        selectedInTransfer !== null && selectedInTransfer.item === row.item
-                                                            ?
-                                                            <TextField
-                                                                autoFocus
-                                                                sx={{
-                                                                    minWidth: 100
-                                                                }}
-                                                                fullWidth
-                                                                size='small'
-                                                                autoComplete="off"
-                                                                margin="dense"
-                                                                id="quantity"
-                                                                type="number"
-                                                                variant="outlined"
-                                                                value={selectedInTransfer.quantity}
-                                                                onChange={(event) => {
-                                                                    setSelectedInTransfer({
-                                                                        ...selectedInTransfer,
-                                                                        quantity: parseInt(event.target.value),
-                                                                    });
-                                                                }}
-                                                                inputProps={{
-                                                                    inputMode: 'numeric',
-                                                                    pattern: '[0-9]*',
-                                                                    min: "0",
-                                                                    step: "1",
-                                                                }}
-                                                                onClick={(event) => {
-                                                                    event.stopPropagation();
-                                                                }}
-                                                                onBlur={(event) => {
-                                                                    if (isSafeInteger(selectedInTransfer.quantity)) {
-                                                                        if (selectedInTransfer.quantity !== 0) {
-                                                                            const value = [...formik.values.InTransfers];
-                                                                            const index = value.findIndex((_inTransfer) => {
-                                                                                return _inTransfer.item === selectedInTransfer.item;
-                                                                            });
-                                                                            value[index].quantity = selectedInTransfer.quantity;
-                                                                            formik.setFieldValue('InTransfers', value);
-                                                                        } else {
-                                                                            const value = [...formik.values.InTransfers];
-                                                                            const index = value.findIndex((_outTransfer) => {
-                                                                                return _outTransfer.item === selectedInTransfer.item;
-                                                                            });
-                                                                            if (index === -1) {
-                                                                                throw Error();
-                                                                            } else {
-                                                                                value.splice(index, 1);
-                                                                            }
-                                                                            formik.setFieldValue('InTransfers', value);
-                                                                        }
-                                                                    }
-
-                                                                    setSelectedInTransfer(null);
-                                                                }}
-                                                            />
-                                                            :
-                                                            <Typography
-                                                                fontFamily='monospace'
-                                                                variant='body2'
-                                                            >
-                                                                {row.quantity}
-                                                            </Typography>
-                                                    }
-                                                </TableCell>
-                                                <TableCell>{row.Item!.Unit.name}</TableCell>
-                                            </TableRow>
-                                        ))}
+                                        <InTransfersList
+                                            formik={formik}
+                                        />
                                     </TableBody>
                                 </Table>
                             </TableContainer>
                         }
                     </Paper>
                     {
-                        formik.touched.InTransfers && Boolean(formik.errors.InTransfers)
+                        formik.touched.InTransfers && Boolean(formik.errors.InTransfers) && typeof formik.errors.InTransfers === 'string'
                         &&
                         <Typography
                             sx={{ flex: '1 1 auto', mx: '14px', mt: '3px' }}

@@ -79,7 +79,7 @@ export interface OutTransactionHistory extends OutTransaction {
 
 export interface OutTransfer {
     item: string;
-    quantity: number;
+    quantity: number | null;
     Item?: Item;
 }
 
@@ -109,7 +109,7 @@ export function OutTransferStrip(props: OutTransferStripProps) {
     const [item, setItem] = React.useState<Readonly<Item> | null>(null);
     const [itemInputValue, setItemInputValue] = React.useState<string>('');
     const [itemOptions, setItemOptions] = React.useState<readonly Item[]>([]);
-    const [quantity, setQuantity] = React.useState(0);
+    const [quantity, setQuantity] = React.useState(1);
     const [outTransferIDs, setOutTransferIDs] = React.useState<readonly string[]>([]);
 
     const itemInputElRef = React.useRef<HTMLDivElement>(null);
@@ -298,7 +298,7 @@ export function OutTransferStrip(props: OutTransferStripProps) {
                         inputProps={{
                             inputMode: 'numeric',
                             pattern: '[0-9]*',
-                            min: "0",
+                            min: "1",
                             step: "1",
                         }}
                     />
@@ -316,7 +316,7 @@ export function OutTransferStrip(props: OutTransferStripProps) {
                             setItem(null);
                             setItemInputValue('');
                             setItemOptions([]);
-                            setQuantity(0);
+                            setQuantity(1);
                             setOutTransferIDs([]);
                         }}
                         onBlur={handleBlur}

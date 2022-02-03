@@ -5,7 +5,9 @@ import {
 } from '@mui/lab';
 import {
     Box,
-    Breadcrumbs, Dialog, Link,
+    Breadcrumbs,
+    Dialog,
+    Link,
     Paper,
     Stack,
     Table,
@@ -15,26 +17,35 @@ import {
     TableHead,
     TableRow,
     TextField,
-    Toolbar,
-    Tooltip,
     Typography,
 } from '@mui/material';
 import { red } from '@mui/material/colors';
 import axios, { AxiosResponse } from 'axios';
-import { isSafeInteger } from 'lodash';
+import { useFormik } from 'formik';
 import {
     DateTime
 } from 'luxon';
+import { useSnackbar } from 'notistack';
 import * as React from 'react';
 import {
-    useNavigate,
-    useLocation,
-    Link as RouterLink,
+    Link as RouterLink, useLocation, useNavigate
 } from 'react-router-dom';
-import { ApiCreateOutTransaction, CreateOutTransaction, OutTransfer, OutTransferStrip } from './OutTransactions';
-import { useFormik } from 'formik';
 import * as Yup from 'yup';
-import { useSnackbar } from 'notistack';
+import { ApiCreateOutTransaction, CreateOutTransaction, OutTransferStrip } from './OutTransactions';
+import OutTransfersList from './OutTransfersList';
+
+// https://usehooks.com/usePrevious/
+function usePrevious<T>(value: T): T {
+    // The ref object is a generic container whose current property is mutable ...
+    // ... and can hold any value, similar to an instance property on a class
+    const ref: any = React.useRef<T>();
+    // Store current value in ref
+    React.useEffect(() => {
+        ref.current = value;
+    }, [value]); // Only re-run if value changes
+    // Return previous value (happens before update in useEffect above)
+    return ref.current;
+}
 
 export default function Create() {
     const navigate = useNavigate();
@@ -42,8 +53,6 @@ export default function Create() {
     const { enqueueSnackbar, closeSnackbar } = useSnackbar();
 
     const [locked, setLocked] = React.useState(false);
-
-    const [selectedOutTransfer, setSelectedOutTransfer] = React.useState<Readonly<OutTransfer> | null>(null);
 
     const formik = useFormik<CreateOutTransaction>({
         initialValues: {
@@ -61,6 +70,13 @@ export default function Create() {
                 .nullable()
                 .typeError('Invalid Date'),
             OutTransfers: Yup.array()
+                .of(
+                    Yup.object().shape({
+                        Item: Yup.object(),
+                        item: Yup.string().required('Required'),
+                        quantity: Yup.number().nullable().required('Required'),
+                    })
+                )
                 .min(1, 'Include at least 1 item')
                 .required('Required'),
         }),
@@ -82,7 +98,7 @@ export default function Create() {
                     }>((outTransfer) => {
                         return {
                             item: outTransfer.item,
-                            quantity: outTransfer.quantity,
+                            quantity: outTransfer.quantity!,
                         };
                     })
                 })
@@ -105,6 +121,14 @@ export default function Create() {
                 });
         },
     });
+
+    const prevTouchedOutTransfers: any = usePrevious<any>(formik.touched.OutTransfers);
+
+    React.useEffect(() => {
+        if (prevTouchedOutTransfers !== undefined && formik.touched.OutTransfers === undefined) {
+            formik.setFieldTouched('InTransfers', true, true);
+        }
+    }, [prevTouchedOutTransfers, formik.touched.OutTransfers]);
 
     return (
         <Stack
@@ -144,7 +168,7 @@ export default function Create() {
                     sx={{ marginLeft: 'auto' }}
                 >
                     <LoadingButton
-                        disabled={!formik.dirty || !formik.isValid || selectedOutTransfer !== null}
+                        disabled={!formik.dirty || !formik.isValid}
                         loading={locked}
                         loadingPosition="start"
                         startIcon={<SaveIcon />}
@@ -220,8 +244,8 @@ export default function Create() {
                     <Paper
                         variant='outlined'
                         sx={{
-                            border: formik.touched.OutTransfers && Boolean(formik.errors.OutTransfers) ? 2 : 1,
-                            borderColor: formik.touched.OutTransfers && Boolean(formik.errors.OutTransfers) ? red[700] : 'rgba(0, 0, 0, 0.42)',
+                            border: formik.touched.OutTransfers && Boolean(formik.errors.OutTransfers) && typeof formik.errors.OutTransfers === 'string' ? 2 : 1,
+                            borderColor: formik.touched.OutTransfers && Boolean(formik.errors.OutTransfers) && typeof formik.errors.OutTransfers === 'string' ? red[700] : 'rgba(0, 0, 0, 0.42)',
                         }}
                     >
                         <OutTransferStrip
@@ -239,7 +263,7 @@ export default function Create() {
                                 formik.setFieldValue('OutTransfers', value);
                             }}
                             handleBlur={() => { formik.setFieldTouched('OutTransfers', true, true); }}
-                            hasError={Boolean(formik.touched.OutTransfers && Boolean(formik.errors.OutTransfers))}
+                            hasError={Boolean(formik.touched.OutTransfers && Boolean(formik.errors.OutTransfers) && typeof formik.errors.OutTransfers === 'string')}
                         />
                         {
                             Boolean(formik.values.OutTransfers.length !== 0)
@@ -250,106 +274,22 @@ export default function Create() {
                                         <TableRow>
                                             <TableCell>Item ID</TableCell>
                                             <TableCell>Item Name</TableCell>
-                                            <TableCell align="right">Quantity</TableCell>
+                                            <TableCell align="right">Quantity*</TableCell>
                                             <TableCell>Item Unit</TableCell>
+                                            <TableCell></TableCell>
                                         </TableRow>
                                     </TableHead>
                                     <TableBody>
-                                        {formik.values.OutTransfers.map((row: OutTransfer) => (
-                                            <TableRow
-                                                onClick={() => {
-                                                    setSelectedOutTransfer(row);
-                                                }}
-                                                key={row.item}
-                                                sx={{ '&:last-child td, &:last-child th': { border: 0 }, cursor: 'pointer' }}>
-                                                <TableCell>
-                                                    <Tooltip title={row.item} placement="right">
-                                                        <Typography
-                                                            fontFamily='monospace'
-                                                            variant='body2'
-                                                        >
-                                                            {row.item.substring(0, 8)}
-                                                        </Typography>
-                                                    </Tooltip>
-                                                </TableCell>
-                                                <TableCell>{row.Item!.name}</TableCell>
-                                                <TableCell align="right">
-                                                    {
-                                                        selectedOutTransfer !== null && selectedOutTransfer.item === row.item
-                                                            ?
-                                                            <TextField
-                                                                autoFocus
-                                                                sx={{
-                                                                    minWidth: 100
-                                                                }}
-                                                                fullWidth
-                                                                size='small'
-                                                                autoComplete="off"
-                                                                margin="dense"
-                                                                id="quantity"
-                                                                type="number"
-                                                                variant="outlined"
-                                                                value={selectedOutTransfer.quantity}
-                                                                onChange={(event) => {
-                                                                    setSelectedOutTransfer({
-                                                                        ...selectedOutTransfer,
-                                                                        quantity: parseInt(event.target.value),
-                                                                    });
-                                                                }}
-                                                                inputProps={{
-                                                                    inputMode: 'numeric',
-                                                                    pattern: '[0-9]*',
-                                                                    min: "0",
-                                                                    step: "1",
-                                                                }}
-                                                                onClick={(event) => {
-                                                                    event.stopPropagation();
-                                                                }}
-                                                                onBlur={(event) => {
-                                                                    if (isSafeInteger(selectedOutTransfer.quantity)) {
-                                                                        if (selectedOutTransfer.quantity !== 0) {
-                                                                            const value = [...formik.values.OutTransfers];
-                                                                            const index = value.findIndex((_outTransfer) => {
-                                                                                return _outTransfer.item === selectedOutTransfer.item;
-                                                                            });
-                                                                            value[index].quantity = selectedOutTransfer.quantity;
-                                                                            formik.setFieldValue('OutTransfers', value);
-                                                                        } else {
-                                                                            const value = [...formik.values.OutTransfers];
-                                                                            const index = value.findIndex((_outTransfer) => {
-                                                                                return _outTransfer.item === selectedOutTransfer.item;
-                                                                            });
-                                                                            if (index === -1) {
-                                                                                throw Error();
-                                                                            } else {
-                                                                                value.splice(index, 1);
-                                                                            }
-                                                                            formik.setFieldValue('OutTransfers', value);
-                                                                        }
-                                                                    }
-
-                                                                    setSelectedOutTransfer(null);
-                                                                }}
-                                                            />
-                                                            :
-                                                            <Typography
-                                                                fontFamily='monospace'
-                                                                variant='body2'
-                                                            >
-                                                                {row.quantity}
-                                                            </Typography>
-                                                    }
-                                                </TableCell>
-                                                <TableCell>{row.Item!.Unit.name}</TableCell>
-                                            </TableRow>
-                                        ))}
+                                        <OutTransfersList
+                                            formik={formik}
+                                        />
                                     </TableBody>
                                 </Table>
                             </TableContainer>
                         }
                     </Paper>
                     {
-                        formik.touched.OutTransfers && Boolean(formik.errors.OutTransfers)
+                        formik.touched.OutTransfers && Boolean(formik.errors.OutTransfers) && typeof formik.errors.OutTransfers === 'string'
                         &&
                         <Typography
                             sx={{ flex: '1 1 auto', mx: '14px', mt: '3px' }}

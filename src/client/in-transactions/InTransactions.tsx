@@ -84,7 +84,7 @@ export interface InTransactionHistory extends InTransaction {
 
 export interface InTransfer {
     item: string;
-    quantity: number;
+    quantity: number | null;
     Item?: Item;
 }
 
@@ -114,7 +114,7 @@ export function InTransferStrip(props: InTransferStripProps) {
     const [item, setItem] = React.useState<Readonly<Item> | null>(null);
     const [itemInputValue, setItemInputValue] = React.useState<string>('');
     const [itemOptions, setItemOptions] = React.useState<readonly Item[]>([]);
-    const [quantity, setQuantity] = React.useState(0);
+    const [quantity, setQuantity] = React.useState(1);
     const [inTransferIDs, setInTransferIDs] = React.useState<readonly string[]>([]);
 
     const itemInputElRef = React.useRef<HTMLDivElement>(null);
@@ -303,7 +303,7 @@ export function InTransferStrip(props: InTransferStripProps) {
                         inputProps={{
                             inputMode: 'numeric',
                             pattern: '[0-9]*',
-                            min: "0",
+                            min: "1",
                             step: "1",
                         }}
                     />
@@ -321,7 +321,7 @@ export function InTransferStrip(props: InTransferStripProps) {
                             setItem(null);
                             setItemInputValue('');
                             setItemOptions([]);
-                            setQuantity(0);
+                            setQuantity(1);
                             setInTransferIDs([]);
                         }}
                         onBlur={handleBlur}
