@@ -126,7 +126,7 @@ export default function Create() {
 
     React.useEffect(() => {
         if (prevTouchedOutTransfers !== undefined && formik.touched.OutTransfers === undefined) {
-            formik.setFieldTouched('InTransfers', true, true);
+            formik.setFieldTouched('OutTransfers', true, true);
         }
     }, [prevTouchedOutTransfers, formik.touched.OutTransfers]);
 
