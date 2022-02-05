@@ -76,10 +76,12 @@ router.get('/', async function (req: Request, res: Response, next: NextFunction)
             include: [
                 {
                     model: Unit,
+                    attributes: ['name'],
                     paranoid: false,
                 },
                 {
                     model: Category,
+                    attributes: ['name'],
                     paranoid: false,
                 },
             ],
@@ -124,10 +126,12 @@ router.get('/', async function (req: Request, res: Response, next: NextFunction)
             include: [
                 {
                     model: Unit,
+                    attributes: ['name'],
                     paranoid: false,
                 },
                 {
                     model: Category,
+                    attributes: ['name'],
                     paranoid: false,
                 },
             ],
@@ -210,10 +214,12 @@ router.get('/alerts', adminRequiredMiddleware, async function (req: Request, res
             include: [
                 {
                     model: Unit,
+                    attributes: ['name'],
                     paranoid: false,
                 },
                 {
                     model: Category,
+                    attributes: ['name'],
                     paranoid: false,
                 },
             ],
@@ -310,10 +316,12 @@ router.get('/:id/histories', adminRequiredMiddleware, async function (req: Reque
             include: [
                 {
                     model: Unit,
+                    attributes: ['name'],
                     paranoid: false,
                 },
                 {
                     model: Category,
+                    attributes: ['name'],
                     paranoid: false,
                 },
             ],
