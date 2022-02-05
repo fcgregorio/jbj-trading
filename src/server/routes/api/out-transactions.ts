@@ -49,6 +49,7 @@ router.post('/', async function (req: Request, res: Response, next: NextFunction
                 );
             }
 
+            let index = 0;
             for (const element of req.body.outTransfers) {
                 let item = undefined;
                 try {
@@ -80,6 +81,7 @@ router.post('/', async function (req: Request, res: Response, next: NextFunction
                     outTransfer = await OutTransfer.create(
                         {
                             transaction: outTransaction.id,
+                            index: index,
                             item: element.item,
                             quantity: element.quantity,
                             createdAt: outTransaction.createdAt,
@@ -158,6 +160,8 @@ router.post('/', async function (req: Request, res: Response, next: NextFunction
                         throw error;
                     }
                 }
+
+                index++;
             }
 
             return outTransaction;
@@ -248,6 +252,7 @@ router.get('/', async function (req: Request, res: Response, next: NextFunction)
             include: [
                 {
                     model: OutTransfer,
+                    separate: true,
                     attributes: ['quantity', 'item'],
                     include: [
                         {
@@ -264,8 +269,7 @@ router.get('/', async function (req: Request, res: Response, next: NextFunction)
                         },
                     ],
                     order: [
-                        ['createdAt', 'DESC'],
-                        ['id', 'DESC'],
+                        ['index', 'ASC'],
                     ],
                 },
             ],
@@ -296,6 +300,7 @@ router.get('/:id', async function (req: Request, res: Response, next: NextFuncti
                 include: [
                     {
                         model: OutTransfer,
+                        separate: true,
                         attributes: ['quantity', 'item'],
                         include: [
                             {
@@ -312,8 +317,7 @@ router.get('/:id', async function (req: Request, res: Response, next: NextFuncti
                             },
                         ],
                         order: [
-                            ['createdAt', 'DESC'],
-                            ['id', 'DESC'],
+                            ['index', 'ASC'],
                         ],
                     },
                 ],

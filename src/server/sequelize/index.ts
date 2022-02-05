@@ -1842,6 +1842,7 @@ Transfer.init(
 
 export interface InTransferAttributes {
     id: string;
+    index: number;
     item: string;
     transaction: string;
     quantity: number;
@@ -1852,6 +1853,7 @@ export interface InTransferAttributes {
 
 export interface InTransferCreationAttributes {
     item: string;
+    index: number;
     transaction: string;
     quantity: number;
     createdAt: Date;
@@ -1860,6 +1862,7 @@ export interface InTransferCreationAttributes {
 
 export class InTransfer extends Model<InTransferAttributes, InTransferCreationAttributes> implements InTransferAttributes {
     public id!: string;
+    public index!: number;
     public item!: string;
     public transaction!: string;
     public quantity!: number;
@@ -1879,6 +1882,22 @@ InTransfer.init(
             allowNull: false,
             primaryKey: true,
             unique: true,
+        },
+        index: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            validate: {
+                notNull: {
+                    msg: 'Required',
+                },
+                isNumeric: {
+                    msg: 'Must a number',
+                },
+                min: {
+                    msg: 'Must be non-negative',
+                    args: [0],
+                },
+            },
         },
         item: {
             type: DataTypes.UUID,
@@ -1928,6 +1947,10 @@ InTransfer.init(
         indexes: [
             {
                 unique: true,
+                fields: ['transaction', 'index'],
+            },
+            {
+                unique: true,
                 fields: ['transaction', 'item'],
             },
             {
@@ -1940,6 +1963,7 @@ InTransfer.init(
 
 export interface OutTransferAttributes {
     id: string;
+    index: number;
     item: string;
     transaction: string;
     quantity: number;
@@ -1950,6 +1974,7 @@ export interface OutTransferAttributes {
 
 export interface OutTransferCreationAttributes {
     item: string;
+    index: number;
     transaction: string;
     quantity: number;
     createdAt: Date;
@@ -1958,6 +1983,7 @@ export interface OutTransferCreationAttributes {
 
 export class OutTransfer extends Model<OutTransferAttributes, OutTransferCreationAttributes> implements OutTransferAttributes {
     public id!: string;
+    public index!: number;
     public item!: string;
     public transaction!: string;
     public quantity!: number;
@@ -1977,6 +2003,22 @@ OutTransfer.init(
             allowNull: false,
             primaryKey: true,
             unique: true,
+        },
+        index: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            validate: {
+                notNull: {
+                    msg: 'Required',
+                },
+                isNumeric: {
+                    msg: 'Must a number',
+                },
+                min: {
+                    msg: 'Must be non-negative',
+                    args: [0],
+                },
+            },
         },
         item: {
             type: DataTypes.UUID,
@@ -2026,9 +2068,12 @@ OutTransfer.init(
         indexes: [
             {
                 unique: true,
+                fields: ['transaction', 'index'],
+            },
+            {
+                unique: true,
                 fields: ['transaction', 'item'],
             },
-
             {
                 fields: ['id', 'createdAt'],
             },
