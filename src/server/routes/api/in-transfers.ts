@@ -1,8 +1,8 @@
-import { NextFunction, Request, Response, Router } from 'express';
-import sequelize, { InTransaction, InTransfer, InTransferAttributes, ItemAttributes, InTransferCreationAttributes, Item, Unit } from '../../sequelize';
-import { loginRequiredMiddleware } from '../../middleware/auth';
-import { Op, WhereOptions } from 'sequelize';
-import { DateTime } from 'luxon';
+import { NextFunction, Request, Response, Router } from "express";
+import { DateTime } from "luxon";
+import { Op } from "sequelize";
+import { loginRequiredMiddleware } from "../../middleware/auth";
+import { InTransaction, InTransfer, Item, Unit } from "../../sequelize";
 
 const router = Router();
 router.use(loginRequiredMiddleware);
@@ -51,165 +51,159 @@ router.use(loginRequiredMiddleware);
 //     }
 // });
 
-router.get('/', async function (req: Request, res: Response, next: NextFunction) {
+router.get(
+  "/",
+  async function (req: Request, res: Response, next: NextFunction) {
     try {
-        let whereAnd: any[] = [];
+      let whereAnd: any[] = [];
 
-        const dateQuery = req.query.date as string;
-        if (dateQuery !== undefined) {
-            const date = DateTime.fromISO(req.query.date as string);
-            if (!date.isValid) {
-                res.status(400).send('Invalid date');
-                return;
-            } else {
-                whereAnd.push(
-                    {
-                        createdAt: {
-                            [Op.gte]: date.startOf('day').toJSDate(),
-                            [Op.lte]: date.endOf('day').toJSDate(),
-                        },
-                    }
-                );
-            }
-        }
-
-        let whereItemAnd: any[] = [];
-
-        const searchQuery = req.query.search as string;
-        if (searchQuery !== undefined && searchQuery !== '') {
-            whereItemAnd.push(
-                {
-                    name: {
-                        [Op.like]: `%${searchQuery}%`, // TODO
-                    },
-                }
-            );
-        }
-
-        const count = await InTransfer.count({
-            include: [
-                {
-                    model: Item,
-                    attributes: ['id', 'name'],
-                    paranoid: false,
-                    where: {
-                        [Op.and]: whereItemAnd,
-                    },
-                },
-            ],
-            where: {
-                [Op.and]: whereAnd,
+      const dateQuery = req.query.date as string;
+      if (dateQuery !== undefined) {
+        const date = DateTime.fromISO(req.query.date as string);
+        if (!date.isValid) {
+          res.status(400).send("Invalid date");
+          return;
+        } else {
+          whereAnd.push({
+            createdAt: {
+              [Op.gte]: date.startOf("day").toJSDate(),
+              [Op.lte]: date.endOf("day").toJSDate(),
             },
-        });
-
-        const cursorQuery = req.query.cursor as string;
-        if (cursorQuery !== undefined) {
-            const cursor = await InTransfer.findByPk(
-                cursorQuery,
-                {
-                    attributes: ['id', 'createdAt'],
-                    rejectOnEmpty: true,
-                },
-            );
-
-            whereAnd.push(
-                {
-                    [Op.or]: [
-                        {
-                            createdAt: {
-                                [Op.lt]: cursor.createdAt,
-                            },
-                        },
-                        {
-                            [Op.and]: [
-                                {
-                                    createdAt: cursor.createdAt,
-                                },
-                                {
-                                    id: {
-                                        [Op.lt]: cursor.id,
-                                    },
-                                },
-                            ],
-                        },
-                    ]
-                }
-            );
+          });
         }
+      }
 
-        const results = await InTransfer.findAll({
-            include: [
-                {
-                    model: InTransaction,
-                    attributes: ['id', 'void']
-                },
-                {
-                    model: Item,
-                    attributes: ['id', 'name'],
-                    paranoid: false,
-                    include: [
-                        {
-                            model: Unit,
-                            attributes: ['name'],
-                            paranoid: false,
-                        },
-                    ],
-                    where: {
-                        [Op.and]: whereItemAnd,
-                    },
-                },
-            ],
+      let whereItemAnd: any[] = [];
+
+      const searchQuery = req.query.search as string;
+      if (searchQuery !== undefined && searchQuery !== "") {
+        whereItemAnd.push({
+          name: {
+            [Op.like]: `%${searchQuery}%`, // TODO
+          },
+        });
+      }
+
+      const count = await InTransfer.count({
+        include: [
+          {
+            model: Item,
+            attributes: ["id", "name"],
+            paranoid: false,
             where: {
-                [Op.and]: whereAnd,
+              [Op.and]: whereItemAnd,
             },
-            order: [
-                ['createdAt', 'DESC'],
-                ['id', 'DESC'],
-            ],
-            limit: 100,
+          },
+        ],
+        where: {
+          [Op.and]: whereAnd,
+        },
+      });
+
+      const cursorQuery = req.query.cursor as string;
+      if (cursorQuery !== undefined) {
+        const cursor = await InTransfer.findByPk(cursorQuery, {
+          attributes: ["id", "createdAt"],
+          rejectOnEmpty: true,
         });
 
-        res.status(200).json({
-            count: count,
-            results: results,
-        });
-    } catch (error: any) {
-        next(error);
-    }
-});
-
-router.get('/:id', async function (req: Request, res: Response, next: NextFunction) {
-    try {
-        const result = await InTransfer.findByPk(
-            req.params.id,
+        whereAnd.push({
+          [Op.or]: [
             {
-                include: [
-                    {
-                        model: InTransaction,
-                        attributes: ['id', 'void']
-                    },
-                    {
-                        model: Item,
-                        attributes: ['id', 'name'],
-                        paranoid: false,
-                        include: [
-                            {
-                                model: Unit,
-                                attributes: ['name'],
-                                paranoid: false,
-                            },
-                        ],
-                    },
-                ],
-                rejectOnEmpty: true,
+              createdAt: {
+                [Op.lt]: cursor.createdAt,
+              },
             },
-        );
+            {
+              [Op.and]: [
+                {
+                  createdAt: cursor.createdAt,
+                },
+                {
+                  id: {
+                    [Op.lt]: cursor.id,
+                  },
+                },
+              ],
+            },
+          ],
+        });
+      }
 
-        res.status(200).json(result);
+      const results = await InTransfer.findAll({
+        include: [
+          {
+            model: InTransaction,
+            attributes: ["id", "void"],
+          },
+          {
+            model: Item,
+            attributes: ["id", "name"],
+            paranoid: false,
+            include: [
+              {
+                model: Unit,
+                attributes: ["name"],
+                paranoid: false,
+              },
+            ],
+            where: {
+              [Op.and]: whereItemAnd,
+            },
+          },
+        ],
+        where: {
+          [Op.and]: whereAnd,
+        },
+        order: [
+          ["createdAt", "DESC"],
+          ["id", "DESC"],
+        ],
+        limit: 100,
+      });
+
+      res.status(200).json({
+        count: count,
+        results: results,
+      });
     } catch (error: any) {
-        next(error);
+      next(error);
     }
-});
+  }
+);
+
+router.get(
+  "/:id",
+  async function (req: Request, res: Response, next: NextFunction) {
+    try {
+      const result = await InTransfer.findByPk(req.params.id, {
+        include: [
+          {
+            model: InTransaction,
+            attributes: ["id", "void"],
+          },
+          {
+            model: Item,
+            attributes: ["id", "name"],
+            paranoid: false,
+            include: [
+              {
+                model: Unit,
+                attributes: ["name"],
+                paranoid: false,
+              },
+            ],
+          },
+        ],
+        rejectOnEmpty: true,
+      });
+
+      res.status(200).json(result);
+    } catch (error: any) {
+      next(error);
+    }
+  }
+);
 
 // router.put('/:id', async function (req: Request, res: Response, next: NextFunction) {
 //     try {

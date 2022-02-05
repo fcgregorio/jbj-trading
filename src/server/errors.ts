@@ -1,23 +1,23 @@
 export class AppValidationErrorItem {
+  readonly message: string | AppValidationErrorItem | AppValidationErrorItem[];
+  readonly path: string;
 
-    readonly message: string | AppValidationErrorItem | AppValidationErrorItem[];
-    readonly path: string;
-
-    constructor(message: string | AppValidationErrorItem | AppValidationErrorItem[], path: string) {
-        this.message = message;
-        this.path = path;
-    }
+  constructor(
+    message: string | AppValidationErrorItem | AppValidationErrorItem[],
+    path: string
+  ) {
+    this.message = message;
+    this.path = path;
+  }
 }
 
 export class AppValidationError extends Error {
+  readonly errors: AppValidationErrorItem[];
 
-    readonly errors: AppValidationErrorItem[];
-
-    constructor(errors: AppValidationErrorItem[]) {
-        super();
-        this.name = 'AppValidationError';
-        this.message = 'Validation Error';
-        this.errors = errors;
-    }
+  constructor(errors: AppValidationErrorItem[]) {
+    super();
+    this.name = "AppValidationError";
+    this.message = "Validation Error";
+    this.errors = errors;
+  }
 }
-

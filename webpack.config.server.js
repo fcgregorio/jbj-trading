@@ -20,7 +20,7 @@ module.exports = {
   resolve: {
     extensions: [".ts", ".tsx", ".js"],
   },
-    // don't compile node_modules
+  // don't compile node_modules
   externals: [nodeExternals()],
   module: {
     rules: [
@@ -30,7 +30,7 @@ module.exports = {
           {
             loader: "ts-loader",
             options: {
-                // use the tsconfig in the server directory
+              // use the tsconfig in the server directory
               configFile: "src/server/tsconfig.json",
             },
           },
