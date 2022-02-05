@@ -1,6 +1,7 @@
 import DeleteIcon from '@mui/icons-material/Delete';
 import {
     IconButton,
+    Link,
     TableCell,
     TableRow,
     TextField,
@@ -9,6 +10,9 @@ import {
 } from '@mui/material';
 import { FieldArray, FormikProvider, getIn } from "formik";
 import * as React from "react";
+import {
+    Link as RouterLink
+} from 'react-router-dom';
 
 export default function (props) {
     return (
@@ -24,12 +28,19 @@ export default function (props) {
                             >
                                 <TableCell>
                                     <Tooltip title={props.formik.values.OutTransfers[index].item} placement="right">
-                                        <Typography
-                                            fontFamily='monospace'
-                                            variant='body2'
+                                        <Link
+                                            underline="none"
+                                            component={RouterLink}
+                                            to={`/items/${props.formik.values.OutTransfers[index].item}`}
+                                            color={'text.primary'}
                                         >
-                                            {props.formik.values.OutTransfers[index].item.substring(0, 8)}
-                                        </Typography>
+                                            <Typography
+                                                fontFamily='monospace'
+                                                variant='body2'
+                                            >
+                                                {props.formik.values.OutTransfers[index].item.substring(0, 8)}
+                                            </Typography>
+                                        </Link>
                                     </Tooltip>
                                 </TableCell>
                                 <TableCell>{props.formik.values.OutTransfers[index].Item.name}</TableCell>
