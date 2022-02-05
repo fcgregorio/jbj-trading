@@ -204,7 +204,7 @@ export function OutTransferStrip(props: OutTransferStripProps) {
         >
             <Typography
                 sx={{ flex: '1 1 auto' }}
-                color={props.hasError ? red[700] : "inherit"}
+                color={props.hasError ? red[700] : "text.secondary"}
                 variant="subtitle1"
                 component="div"
             >

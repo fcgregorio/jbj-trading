@@ -440,7 +440,7 @@ export default function Show() {
                                     >
                                         <Typography
                                             sx={{ flex: '1 1 auto' }}
-                                            color="primary"
+                                            color="text.secondary"
                                             variant="subtitle1"
                                             component="div"
                                         >

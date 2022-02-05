@@ -321,7 +321,7 @@ export default function Edit() {
                                             variant="subtitle1"
                                             component="div"
                                         >
-                                            In-Transfers
+                                            Out-Transfers
                                         </Typography>
                                     </Toolbar>
                                     <TableContainer>
