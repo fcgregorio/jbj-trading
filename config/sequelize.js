@@ -1,28 +1,39 @@
-require("dotenv").config();
+const dotenv = require("dotenv");
 
-const { DB_HOST, DB_DATABASE, DB_USERNAME, DB_PASSWORD } = process.env;
+const dotenvResult = dotenv.config();
+if (dotenvResult.error) {
+  throw dotenvResult.error;
+}
 
 module.exports = {
   development: {
-    storage: "dev.sqlite",
-    dialect: "sqlite",
-    logQueryParameters: true,
-    benchmark: true,
+    username: process.env.DB_USERNAME,
+    password: process.env.DB_PASSWORD,
+    database: process.env.DB_DATABASE,
+    host: process.env.DB_HOST,
+    storage: process.env.DB_STORAGE,
+    dialect: process.env.DB_DIALECT,
+    logQueryParameters: process.env.DB_LOG_QUERY_PARAMETERS,
+    benchmark: process.env.DB_BENCHMARK,
   },
   test: {
-    username: "root",
-    password: null,
-    database: "database_test",
-    host: "127.0.0.1",
-    dialect: "mysql",
+    username: process.env.DB_USERNAME,
+    password: process.env.DB_PASSWORD,
+    database: process.env.DB_DATABASE,
+    host: process.env.DB_HOST,
+    storage: process.env.DB_STORAGE,
+    dialect: process.env.DB_DIALECT,
+    logQueryParameters: process.env.DB_LOG_QUERY_PARAMETERS,
+    benchmark: process.env.DB_BENCHMARK,
   },
   production: {
-    username: DB_USERNAME,
-    password: DB_PASSWORD,
-    database: DB_DATABASE,
-    host: DB_HOST,
-    dialect: "postgres",
-    logQueryParameters: false,
-    benchmark: false,
+    username: process.env.DB_USERNAME,
+    password: process.env.DB_PASSWORD,
+    database: process.env.DB_DATABASE,
+    host: process.env.DB_HOST,
+    storage: process.env.DB_STORAGE,
+    dialect: process.env.DB_DIALECT,
+    logQueryParameters: process.env.DB_LOG_QUERY_PARAMETERS,
+    benchmark: process.env.DB_BENCHMARK,
   },
 };

@@ -1,5 +1,4 @@
 import cookieParser from "cookie-parser";
-import dotenv from "dotenv";
 import express, { Router } from "express";
 import path from "path";
 import { errorHandlerMiddleware } from "./middleware/error";
@@ -15,8 +14,6 @@ import transactionsRouter from "./routes/api/transactions";
 import transfersRouter from "./routes/api/transfers";
 import unitsRouter from "./routes/api/units";
 import usersRouter from "./routes/api/users";
-
-dotenv.config();
 
 // sequelize.sync();
 

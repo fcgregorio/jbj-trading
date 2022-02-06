@@ -3,8 +3,18 @@
  */
 
 import debug from "debug";
+import dotenv from "dotenv";
 import http from "http";
 import app from "../app";
+import Logger from "../winston";
+
+const dotenvResult = dotenv.config();
+if (dotenvResult.error) {
+  throw dotenvResult.error;
+}
+
+Logger.debug(process.env.NODE_ENV);
+Logger.debug(dotenvResult.parsed);
 
 debug("olbes:server");
 
