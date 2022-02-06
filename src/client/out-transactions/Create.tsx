@@ -187,6 +187,7 @@ export default function Create() {
               disabled={!formik.dirty || !formik.isValid}
               loading={locked}
               loadingIndicator=""
+              loadingPosition="start"
               variant="contained"
               onClick={async () => {
                 await formik.setFieldValue("altSubmit", true);
