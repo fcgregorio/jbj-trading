@@ -1,6 +1,6 @@
 import { LocalizationProvider } from "@mui/lab";
 import AdapterLuxon from "@mui/lab/AdapterLuxon";
-import { CssBaseline } from "@mui/material";
+import { CssBaseline, Stack } from "@mui/material";
 import axios from "axios";
 import * as React from "react";
 import { Route, Routes } from "react-router-dom";
@@ -64,6 +64,32 @@ function useLocalStorage<T>(key: string, initialValue: T) {
   return [storedValue, setStoredValue] as const;
 }
 
+function Index() {
+  React.useEffect(() => {
+    document.title = `Olbes`;
+  }, []);
+
+  return null;
+}
+
+function NotFound() {
+  React.useEffect(() => {
+    document.title = `Not Found`;
+  }, []);
+
+  return (
+    <Stack
+      spacing={2}
+      sx={{
+        marginX: 2,
+        marginY: 2,
+      }}
+    >
+      Not Found
+    </Stack>
+  );
+}
+
 function App() {
   const [authContext, setAuthContext] = useLocalStorage<{
     user: User;
@@ -107,7 +133,8 @@ function App() {
               <Route path="units/*" element={<Units />} />
               <Route path="categories/*" element={<Categories />} />
               <Route path="users/*" element={<Users />} />
-              <Route index />
+              <Route path="*" element={<NotFound />} />
+              <Route index element={<Index />} />
             </Route>
           </Routes>
         </SnackbarProvider>
