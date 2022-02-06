@@ -24,6 +24,10 @@ export default function Create() {
   const location = useLocation();
   const { enqueueSnackbar, closeSnackbar } = useSnackbar();
 
+  React.useEffect(() => {
+    document.title = `Create Item`;
+  }, []);
+
   const [locked, setLocked] = React.useState(false);
 
   const [unitInputValue, setUnitInputValue] = React.useState("");

@@ -22,6 +22,10 @@ export default function Create() {
   const location = useLocation();
   const { enqueueSnackbar, closeSnackbar } = useSnackbar();
 
+  React.useEffect(() => {
+    document.title = `Create Category`;
+  }, []);
+
   const [locked, setLocked] = React.useState(false);
 
   const formik = useFormik<CreateCategory>({

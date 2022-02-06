@@ -32,6 +32,10 @@ export default function Index() {
   const location = useLocation();
   const { enqueueSnackbar, closeSnackbar } = useSnackbar();
 
+  React.useEffect(() => {
+    document.title = `Transactions`;
+  }, []);
+
   const [authContext] = React.useContext(AuthContext);
 
   const [search, setSearch] = React.useState<string>("");

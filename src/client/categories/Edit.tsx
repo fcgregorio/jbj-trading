@@ -31,6 +31,10 @@ export default function Edit() {
   const params = useParams();
   const { enqueueSnackbar, closeSnackbar } = useSnackbar();
 
+  React.useEffect(() => {
+    document.title = `Edit Category ${params.categoryID?.slice(0, 8)}`;
+  }, []);
+
   const [loading, setLoading] = React.useState(false);
   const [locked, setLocked] = React.useState(false);
 

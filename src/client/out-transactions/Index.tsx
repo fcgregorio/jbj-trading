@@ -30,6 +30,10 @@ export default function Index() {
   const location = useLocation();
   const { enqueueSnackbar, closeSnackbar } = useSnackbar();
 
+  React.useEffect(() => {
+    document.title = `Out-Transactions`;
+  }, []);
+
   const [search, setSearch] = React.useState<string>("");
   const [date, setDate] = React.useState<DateTime>(DateTime.now());
   const [cursor, setCursor] = React.useState<string | null>(null);

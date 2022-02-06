@@ -50,6 +50,10 @@ export default function Create() {
   const location = useLocation();
   const { enqueueSnackbar, closeSnackbar } = useSnackbar();
 
+  React.useEffect(() => {
+    document.title = `Create In-Transaction`;
+  }, []);
+
   const [locked, setLocked] = React.useState(false);
 
   const formik = useFormik<CreateInTransaction>({

@@ -25,6 +25,10 @@ export default function Create() {
   const location = useLocation();
   const { enqueueSnackbar, closeSnackbar } = useSnackbar();
 
+  React.useEffect(() => {
+    document.title = `Create User`;
+  }, []);
+
   const [locked, setLocked] = React.useState(false);
 
   const formik = useFormik<CreateUser>({

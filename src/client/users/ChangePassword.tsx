@@ -31,6 +31,10 @@ export default function ChangePassword() {
   const params = useParams();
   const { enqueueSnackbar, closeSnackbar } = useSnackbar();
 
+  React.useEffect(() => {
+    document.title = `Change Password User ${params.userID?.slice(0, 8)}`;
+  }, []);
+
   const [loading, setLoading] = React.useState(false);
   const [locked, setLocked] = React.useState(false);
 

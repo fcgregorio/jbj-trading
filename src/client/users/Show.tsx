@@ -46,6 +46,10 @@ function History() {
   const params = useParams();
   const { enqueueSnackbar, closeSnackbar } = useSnackbar();
 
+  React.useEffect(() => {
+    document.title = `User ${params.userID?.slice(0, 8)}`;
+  }, []);
+
   const [loading, setLoading] = React.useState(false);
   const [cursor, setCursor] = React.useState<number | null>(null);
   const cancelTokenSourceRef = React.useRef<CancelTokenSource | null>(null);

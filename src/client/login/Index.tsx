@@ -15,6 +15,10 @@ export default function Index() {
   const location = useLocation();
   const { enqueueSnackbar, closeSnackbar } = useSnackbar();
 
+  React.useEffect(() => {
+    document.title = `Login`;
+  }, []);
+
   const [authContext, setAuthContext] = React.useContext(AuthContext);
 
   const [locked, setLocked] = React.useState(false);

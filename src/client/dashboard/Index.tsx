@@ -3,6 +3,10 @@ import * as React from "react";
 import Items from "./Items";
 
 export default () => {
+  React.useEffect(() => {
+    document.title = `Dashboard`;
+  }, []);
+
   return (
     <Stack
       direction={"row"}
