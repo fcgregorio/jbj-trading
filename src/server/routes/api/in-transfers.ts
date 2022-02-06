@@ -59,7 +59,9 @@ router.get(
 
       const dateQuery = req.query.date as string;
       if (dateQuery !== undefined) {
-        const date = DateTime.fromISO(req.query.date as string);
+        const date = DateTime.fromISO(dateQuery, {
+          setZone: true,
+        });
         if (!date.isValid) {
           res.status(400).send("Invalid date");
           return;
