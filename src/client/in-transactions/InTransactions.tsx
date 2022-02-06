@@ -41,6 +41,7 @@ export interface CreateInTransaction {
   dateOfDeliveryReceipt: DateTime | null;
   dateReceived: DateTime | null;
   InTransfers: InTransfer[];
+  altSubmit: boolean;
 }
 
 export interface ApiCreateInTransaction {

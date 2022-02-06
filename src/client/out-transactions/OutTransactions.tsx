@@ -38,6 +38,7 @@ export interface CreateOutTransaction {
   deliveryReceipt: string | null;
   dateOfDeliveryReceipt: DateTime | null;
   OutTransfers: OutTransfer[];
+  altSubmit: boolean;
 }
 
 export interface ApiCreateOutTransaction {

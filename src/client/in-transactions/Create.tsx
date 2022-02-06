@@ -3,6 +3,7 @@ import { DesktopDatePicker, LoadingButton } from "@mui/lab";
 import {
   Box,
   Breadcrumbs,
+  ButtonGroup,
   colors,
   Dialog,
   Link,
@@ -58,6 +59,7 @@ export default function Create() {
       dateOfDeliveryReceipt: null,
       dateReceived: null,
       InTransfers: [],
+      altSubmit: false,
     },
     validationSchema: Yup.object().shape({
       supplier: Yup.string().required("Required"),
@@ -107,6 +109,9 @@ export default function Create() {
         .then((result) => result.data)
         .then((result) => {
           navigate(`../${result}`, { replace: true });
+          if (values.altSubmit) {
+            navigate(`../create`, { replace: true });
+          }
           enqueueSnackbar("Create in-transaction successful", {
             variant: "success",
           });
@@ -168,18 +173,33 @@ export default function Create() {
           </Box>
         </Stack>
         <Stack direction="row" spacing={2} sx={{ marginLeft: "auto" }}>
-          <LoadingButton
-            disabled={!formik.dirty || !formik.isValid}
-            loading={locked}
-            loadingPosition="start"
-            startIcon={<SaveIcon />}
-            variant="contained"
-            onClick={() => {
-              formik.submitForm();
-            }}
-          >
-            Save
-          </LoadingButton>
+          <ButtonGroup>
+            <LoadingButton
+              disabled={!formik.dirty || !formik.isValid}
+              loading={locked}
+              loadingPosition="start"
+              startIcon={<SaveIcon />}
+              variant="contained"
+              onClick={async () => {
+                await formik.setFieldValue("altSubmit", false);
+                await formik.submitForm();
+              }}
+            >
+              Save
+            </LoadingButton>
+            <LoadingButton
+              disabled={!formik.dirty || !formik.isValid}
+              loading={locked}
+              loadingIndicator=""
+              variant="contained"
+              onClick={async () => {
+                await formik.setFieldValue("altSubmit", true);
+                await formik.submitForm();
+              }}
+            >
+              Save &amp; Add Another
+            </LoadingButton>
+          </ButtonGroup>
           <Dialog open={locked} />
         </Stack>
       </Box>
