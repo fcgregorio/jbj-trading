@@ -159,7 +159,6 @@ router.get(
         results: results,
       });
     } catch (error: any) {
-      console.log(error);
       next(error);
     }
   }
@@ -185,7 +184,6 @@ router.get(
       });
 
       const cursorQuery = req.query.cursor as string;
-      console.log(cursorQuery);
       if (cursorQuery !== undefined) {
         const cursor = await Item.findByPk(cursorQuery, {
           attributes: ["id", "createdAt"],
