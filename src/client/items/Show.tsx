@@ -154,63 +154,179 @@ function History() {
             </TableRow>
           )}
           {itemHistories.map((row: any) => (
-            <TableRow
-              key={row.id}
-              sx={{
-                "&:last-child td, &:last-child th": { border: 0 },
-              }}
-            >
-              <TableCell>
-                <Typography fontFamily="monospace" variant="body2">
-                  {row.historyId}
-                </Typography>
-              </TableCell>
-              <TableCell>
-                <Tooltip title={row.historyUser} placement="right">
-                  <Link
-                    underline="none"
-                    component={RouterLink}
-                    to={`/users/${row.historyUser}`}
-                    color={"text.primary"}
+            <React.Fragment>
+              <TableRow
+                key={row.id}
+                sx={{
+                  "&:last-child td, &:last-child th": { border: 0 },
+                }}
+              >
+                <TableCell>
+                  <Typography fontFamily="monospace" variant="body2">
+                    {row.historyId}
+                  </Typography>
+                </TableCell>
+                <TableCell>
+                  <Tooltip title={row.historyUser} placement="right">
+                    <Link
+                      underline="none"
+                      component={RouterLink}
+                      to={`/users/${row.historyUser}`}
+                      color={"text.primary"}
+                    >
+                      <Typography fontFamily="monospace" variant="body2">
+                        {row.historyUser.substring(0, 8)}
+                      </Typography>
+                    </Link>
+                  </Tooltip>
+                </TableCell>
+                <TableCell>{row.name}</TableCell>
+                <TableCell align="right">
+                  <Typography fontFamily="monospace" variant="body2">
+                    {row.stock}
+                  </Typography>
+                </TableCell>
+                <TableCell align="right">
+                  <Typography fontFamily="monospace" variant="body2">
+                    {row.safetyStock}
+                  </Typography>
+                </TableCell>
+                <TableCell>{row.Unit.name}</TableCell>
+                <TableCell>{row.Category.name}</TableCell>
+                <TableCell>{row.remarks}</TableCell>
+                <TableCell align="right">
+                  {DateTime.fromISO(row.createdAt)
+                    .toLocal()
+                    .toLocaleString(DateTime.DATETIME_SHORT)}
+                </TableCell>
+                <TableCell align="right">
+                  {DateTime.fromISO(row.updatedAt)
+                    .toLocal()
+                    .toLocaleString(DateTime.DATETIME_SHORT)}
+                </TableCell>
+                <TableCell align="right">
+                  {row.deletedAt !== null
+                    ? DateTime.fromISO(row.deletedAt)
+                        .toLocal()
+                        .toLocaleString(DateTime.DATETIME_SHORT)
+                    : null}
+                </TableCell>
+              </TableRow>
+              {row.transfer && row.transfer.InTransfer && (
+                <React.Fragment>
+                  <TableRow
+                    key={row.id}
+                    sx={{
+                      "&:last-child td, &:last-child th": { border: 0 },
+                    }}
                   >
-                    <Typography fontFamily="monospace" variant="body2">
-                      {row.historyUser.substring(0, 8)}
-                    </Typography>
-                  </Link>
-                </Tooltip>
-              </TableCell>
-              <TableCell>{row.name}</TableCell>
-              <TableCell align="right">
-                <Typography fontFamily="monospace" variant="body2">
-                  {row.stock}
-                </Typography>
-              </TableCell>
-              <TableCell align="right">
-                <Typography fontFamily="monospace" variant="body2">
-                  {row.safetyStock}
-                </Typography>
-              </TableCell>
-              <TableCell>{row.Unit.name}</TableCell>
-              <TableCell>{row.Category.name}</TableCell>
-              <TableCell>{row.remarks}</TableCell>
-              <TableCell align="right">
-                {DateTime.fromISO(row.createdAt)
-                  .toLocal()
-                  .toLocaleString(DateTime.DATETIME_SHORT)}
-              </TableCell>
-              <TableCell align="right">
-                {DateTime.fromISO(row.updatedAt)
-                  .toLocal()
-                  .toLocaleString(DateTime.DATETIME_SHORT)}
-              </TableCell>
-              <TableCell align="right">
-                {row.deletedAt !== null
-                  ? DateTime.fromISO(row.deletedAt)
-                      .toLocal()
-                      .toLocaleString(DateTime.DATETIME_SHORT)
-                  : null}
-              </TableCell>
-            </TableRow>
+                    <TableCell rowSpan={2} />
+                    <TableCell sx={{ fontWeight: "medium" }}>
+                      Transaction ID
+                    </TableCell>
+                    <TableCell sx={{ fontWeight: "medium" }}>
+                      Supplier
+                    </TableCell>
+                    <TableCell align="right" sx={{ fontWeight: "medium" }}>
+                      Quantity
+                    </TableCell>
+                    <TableCell rowSpan={2} colSpan={7} />
+                  </TableRow>
+                  <TableRow
+                    key={row.id}
+                    sx={{
+                      "&:last-child td, &:last-child th": { border: 0 },
+                    }}
+                  >
+                    <TableCell>
+                      <Tooltip
+                        title={row.transfer.InTransfer.InTransaction.id}
+                        placement="right"
+                      >
+                        <Link
+                          underline="none"
+                          component={RouterLink}
+                          to={`/in-transactions/${row.transfer.InTransfer.InTransaction.id}`}
+                          color={"text.primary"}
+                        >
+                          <Typography fontFamily="monospace" variant="body2">
+                            {row.transfer.InTransfer.InTransaction.id.substring(
+                              0,
+                              8
+                            )}
+                          </Typography>
+                        </Link>
+                      </Tooltip>
+                    </TableCell>
+                    <TableCell>
+                      {row.transfer.InTransfer.InTransaction.supplier}
+                    </TableCell>
+                    <TableCell align="right">
+                      <Typography fontFamily="monospace" variant="body2">
+                        +{row.transfer.InTransfer.quantity}
+                      </Typography>
+                    </TableCell>
+                  </TableRow>
+                </React.Fragment>
+              )}
+              {row.transfer && row.transfer.OutTransfer && (
+                <React.Fragment>
+                  <TableRow
+                    key={row.id}
+                    sx={{
+                      "&:last-child td, &:last-child th": { border: 0 },
+                    }}
+                  >
+                    <TableCell rowSpan={2} />
+                    <TableCell sx={{ fontWeight: "medium" }}>
+                      Transaction ID
+                    </TableCell>
+                    <TableCell sx={{ fontWeight: "medium" }}>
+                      Customer
+                    </TableCell>
+                    <TableCell align="right" sx={{ fontWeight: "medium" }}>
+                      Quantity
+                    </TableCell>
+                    <TableCell rowSpan={2} colSpan={7} />
+                  </TableRow>
+                  <TableRow
+                    key={row.id}
+                    sx={{
+                      "&:last-child td, &:last-child th": { border: 0 },
+                    }}
+                  >
+                    <TableCell>
+                      <Tooltip
+                        title={row.transfer.OutTransfer.OutTransaction.id}
+                        placement="right"
+                      >
+                        <Link
+                          underline="none"
+                          component={RouterLink}
+                          to={`/out-transactions/${row.transfer.OutTransfer.OutTransaction.id}`}
+                          color={"text.primary"}
+                        >
+                          <Typography fontFamily="monospace" variant="body2">
+                            {row.transfer.OutTransfer.OutTransaction.id.substring(
+                              0,
+                              8
+                            )}
+                          </Typography>
+                        </Link>
+                      </Tooltip>
+                    </TableCell>
+                    <TableCell>
+                      {row.transfer.OutTransfer.OutTransaction.customer}
+                    </TableCell>
+                    <TableCell align="right">
+                      <Typography fontFamily="monospace" variant="body2">
+                        -{row.transfer.OutTransfer.quantity}
+                      </Typography>
+                    </TableCell>
+                  </TableRow>
+                </React.Fragment>
+              )}
+            </React.Fragment>
           ))}
           {loading ||
             (cursor && (

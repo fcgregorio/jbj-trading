@@ -6,11 +6,17 @@ import {
 } from "../../middleware/auth";
 import sequelize, {
   Category,
+  InTransaction,
+  InTransfer,
   Item,
   ItemHistory,
+  OutTransaction,
+  OutTransfer,
+  Transfer,
   Unit,
   User,
 } from "../../sequelize";
+import * as _ from "lodash";
 
 const router = Router();
 router.use(loginRequiredMiddleware);
@@ -333,9 +339,70 @@ router.get(
         limit: 100,
       });
 
+      const updatedAts = results.map(
+        (itemHistory) => itemHistory.updatedAt as any
+      );
+
+      const transfers = await Transfer.findAll({
+        attributes: ["createdAt"],
+        include: [
+          {
+            model: InTransfer,
+            attributes: ["quantity"],
+            include: [
+              {
+                model: InTransaction,
+                attributes: ["id", "supplier"],
+              },
+            ],
+            required: false,
+          },
+          {
+            model: OutTransfer,
+            attributes: ["quantity"],
+            include: [
+              {
+                model: OutTransaction,
+                attributes: ["id", "customer"],
+              },
+            ],
+            required: false,
+          },
+        ],
+        where: {
+          [Op.or]: [
+            {
+              [Op.and]: {
+                "$InTransfer.item$": req.params.id,
+                "$InTransfer.createdAt$": {
+                  [Op.in]: updatedAts,
+                },
+              },
+            },
+            {
+              [Op.and]: {
+                "$OutTransfer.item$": req.params.id,
+                "$OutTransfer.createdAt$": {
+                  [Op.in]: updatedAts,
+                },
+              },
+            },
+          ],
+        },
+      });
+
+      const keyedTransfers = _.keyBy(transfers, (transfer) =>
+        transfer.createdAt.toISOString()
+      );
+
       res.status(200).json({
         count: count,
-        results: results,
+        results: results.map((result) => {
+          const clone = JSON.parse(JSON.stringify(result));
+          clone.transfer = null;
+          clone.transfer = keyedTransfers[result.updatedAt.toISOString()];
+          return clone;
+        }),
       });
     } catch (error: any) {
       next(error);
