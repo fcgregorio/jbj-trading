@@ -408,7 +408,9 @@ export default function Index() {
               <TableCell align="right">
                 <TableSortLabel
                   active={order.by === "createdAt"}
-                  direction={order.by === "createdAt" ? order.direction : "desc"}
+                  direction={
+                    order.by === "createdAt" ? order.direction : "desc"
+                  }
                   onClick={() => {
                     handleChangeSort({ by: "createdAt", direction: "desc" });
                   }}
@@ -419,7 +421,9 @@ export default function Index() {
               <TableCell align="right">
                 <TableSortLabel
                   active={order.by === "updatedAt"}
-                  direction={order.by === "updatedAt" ? order.direction : "desc"}
+                  direction={
+                    order.by === "updatedAt" ? order.direction : "desc"
+                  }
                   onClick={() => {
                     handleChangeSort({ by: "updatedAt", direction: "desc" });
                   }}
