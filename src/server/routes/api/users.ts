@@ -1,5 +1,5 @@
 import { NextFunction, Request, Response, Router } from "express";
-import { Op } from "sequelize";
+import { Op, Order } from "sequelize";
 import { AppValidationError, AppValidationErrorItem } from "../../errors";
 import {
   adminRequiredMiddleware,
@@ -68,6 +68,7 @@ router.get(
   async function (req: Request, res: Response, next: NextFunction) {
     try {
       const user = res.locals.user as User;
+      let order: Order = [["updatedAt", "DESC"]];
 
       const filters = JSON.parse(req.query.filters as string);
 
@@ -94,12 +95,12 @@ router.get(
         });
       }
 
-      const count = await User.count({
-        where: {
-          [Op.and]: whereAnd,
-        },
-        paranoid: !filters.showDeleted,
-      });
+      const orderQuery = Boolean(req.query.order)
+        ? JSON.parse(req.query.order as string)
+        : null;
+      if (orderQuery) {
+        order = [[orderQuery.by, orderQuery.direction]];
+      }
 
       const cursorQuery = req.query.cursor as string;
       if (cursorQuery !== undefined) {
@@ -137,16 +138,13 @@ router.get(
           [Op.and]: whereAnd,
         },
         attributes: { exclude: ["password"] },
-        order: [
-          ["createdAt", "DESC"],
-          ["id", "DESC"],
-        ],
-        limit: 100,
+        order: order,
+        // limit: 100,
         paranoid: !filters.showDeleted,
       });
 
       res.status(200).json({
-        count: count,
+        count: results.length,
         results: results,
       });
     } catch (error) {

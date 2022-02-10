@@ -15,6 +15,7 @@ import {
   TableContainer,
   TableHead,
   TableRow,
+  TableSortLabel,
   TextField,
   Tooltip,
   Typography,
@@ -45,6 +46,10 @@ export default function Index() {
   const [filterMenuShowDeleted, setFilterMenuShowDeleted] =
     React.useState<boolean>(false);
   const [cursor, setCursor] = React.useState<string | null>(null);
+  const [order, setOrder] = React.useState<{
+    by: string;
+    direction: "asc" | "desc";
+  }>({ by: "updatedAt", direction: "desc" });
 
   const [loading, setLoading] = React.useState(false);
   const cancelTokenSourceRef = React.useRef<CancelTokenSource | null>(null);
@@ -60,6 +65,10 @@ export default function Index() {
             search: string;
             filters: {
               showDeleted: boolean;
+            };
+            order: {
+              by: string;
+              direction: string;
             };
           },
           startCallback: () => void,
@@ -107,6 +116,7 @@ export default function Index() {
         filters: {
           showDeleted: filterMenuShowDeleted,
         },
+        order: order,
       },
       () => {
         setCount(null);
@@ -137,7 +147,7 @@ export default function Index() {
     return () => {
       cancelTokenSource.cancel();
     };
-  }, [queryUsers, search, filterMenuShowDeleted]);
+  }, [queryUsers, search, filterMenuShowDeleted, order]);
 
   async function handleLoadMoreClick() {
     setLoading(true);
@@ -175,6 +185,75 @@ export default function Index() {
         setLoading(false);
       });
   }
+
+  function handleChangeSort(defaultOrder: {
+    by: string;
+    direction: "asc" | "desc";
+  }) {
+    if (order.by === defaultOrder.by) {
+      setOrder({
+        ...order,
+        direction: order.direction === "asc" ? "desc" : "asc",
+      });
+    } else {
+      setOrder(defaultOrder);
+    }
+  }
+
+  const rows = React.useMemo(() => {
+    return users.map((row: any) => (
+      <TableRow
+        key={row.name}
+        sx={{ "&:last-child td, &:last-child th": { border: 0 } }}
+      >
+        <TableCell>
+          <Tooltip title={row.id} placement="right">
+            <Link
+              underline="none"
+              component={RouterLink}
+              to={row.id}
+              color={"text.primary"}
+            >
+              <Typography fontFamily="monospace" variant="body2">
+                {row.id.substring(0, 8)}
+              </Typography>
+            </Link>
+          </Tooltip>
+        </TableCell>
+        <TableCell>
+          <Typography fontFamily="monospace" variant="body2">
+            {row.username}
+          </Typography>
+        </TableCell>
+        <TableCell>{row.firstName}</TableCell>
+        <TableCell>{row.lastName}</TableCell>
+        <TableCell align="right">
+          <Typography fontFamily="monospace" variant="body2">
+            {row.admin.toString()}
+          </Typography>
+        </TableCell>
+        <TableCell align="right">
+          {DateTime.fromISO(row.createdAt)
+            .toLocal()
+            .toLocaleString(DateTime.DATETIME_SHORT)}
+        </TableCell>
+        <TableCell align="right">
+          {DateTime.fromISO(row.updatedAt)
+            .toLocal()
+            .toLocaleString(DateTime.DATETIME_SHORT)}
+        </TableCell>
+        {filterMenuShowDeleted && (
+          <TableCell align="right">
+            {row.deletedAt !== null
+              ? DateTime.fromISO(row.deletedAt)
+                  .toLocal()
+                  .toLocaleString(DateTime.DATETIME_SHORT)
+              : null}
+          </TableCell>
+        )}
+      </TableRow>
+    ));
+  }, [users]);
 
   return (
     <Stack
@@ -273,14 +352,90 @@ export default function Index() {
           <TableHead>
             <TableRow>
               <TableCell>ID</TableCell>
-              <TableCell>Username</TableCell>
-              <TableCell>First Name</TableCell>
-              <TableCell>Last Name</TableCell>
-              <TableCell align="right">Admin</TableCell>
-              <TableCell align="right">Created At</TableCell>
-              <TableCell align="right">Updated At</TableCell>
+              <TableCell>
+                <TableSortLabel
+                  active={order.by === "username"}
+                  direction={order.by === "username" ? order.direction : "asc"}
+                  onClick={() => {
+                    handleChangeSort({ by: "username", direction: "asc" });
+                  }}
+                >
+                  Username
+                </TableSortLabel>
+              </TableCell>
+              <TableCell>
+                <TableSortLabel
+                  active={order.by === "firstName"}
+                  direction={order.by === "firstName" ? order.direction : "asc"}
+                  onClick={() => {
+                    handleChangeSort({ by: "firstName", direction: "asc" });
+                  }}
+                >
+                  First Name
+                </TableSortLabel>
+              </TableCell>
+              <TableCell>
+                <TableSortLabel
+                  active={order.by === "lastName"}
+                  direction={order.by === "lastName" ? order.direction : "asc"}
+                  onClick={() => {
+                    handleChangeSort({ by: "lastName", direction: "asc" });
+                  }}
+                >
+                  Last Name
+                </TableSortLabel>
+              </TableCell>
+              <TableCell align="right">
+                <TableSortLabel
+                  active={order.by === "admin"}
+                  direction={order.by === "admin" ? order.direction : "asc"}
+                  onClick={() => {
+                    handleChangeSort({ by: "admin", direction: "asc" });
+                  }}
+                >
+                  Admin
+                </TableSortLabel>
+              </TableCell>
+              <TableCell align="right">
+                <TableSortLabel
+                  active={order.by === "createdAt"}
+                  direction={
+                    order.by === "createdAt" ? order.direction : "desc"
+                  }
+                  onClick={() => {
+                    handleChangeSort({ by: "createdAt", direction: "desc" });
+                  }}
+                >
+                  Created At
+                </TableSortLabel>
+              </TableCell>
+              <TableCell align="right">
+                <TableSortLabel
+                  active={order.by === "updatedAt"}
+                  direction={
+                    order.by === "updatedAt" ? order.direction : "desc"
+                  }
+                  onClick={() => {
+                    handleChangeSort({ by: "updatedAt", direction: "desc" });
+                  }}
+                >
+                  Updated At
+                </TableSortLabel>
+              </TableCell>
               {filterMenuShowDeleted && (
-                <TableCell align="right">Deleted At</TableCell>
+                <TableCell align="right">
+                  <TableSortLabel
+                    active={order.by === "deletedAt"}
+                    direction={
+                      order.by === "deletedAt" ? order.direction : "desc"
+                    }
+                    onClick={() => {
+                      handleChangeSort({ by: "deletedAt", direction: "desc" });
+                    }}
+                  >
+                    Deleted At
+                  </TableSortLabel>
+                </TableCell>
               )}
             </TableRow>
           </TableHead>
@@ -298,58 +453,7 @@ export default function Index() {
                 </TableCell>
               </TableRow>
             )}
-            {users.map((row: any) => (
-              <TableRow
-                key={row.name}
-                sx={{ "&:last-child td, &:last-child th": { border: 0 } }}
-              >
-                <TableCell>
-                  <Tooltip title={row.id} placement="right">
-                    <Link
-                      underline="none"
-                      component={RouterLink}
-                      to={row.id}
-                      color={"text.primary"}
-                    >
-                      <Typography fontFamily="monospace" variant="body2">
-                        {row.id.substring(0, 8)}
-                      </Typography>
-                    </Link>
-                  </Tooltip>
-                </TableCell>
-                <TableCell>
-                  <Typography fontFamily="monospace" variant="body2">
-                    {row.username}
-                  </Typography>
-                </TableCell>
-                <TableCell>{row.firstName}</TableCell>
-                <TableCell>{row.lastName}</TableCell>
-                <TableCell align="right">
-                  <Typography fontFamily="monospace" variant="body2">
-                    {row.admin.toString()}
-                  </Typography>
-                </TableCell>
-                <TableCell align="right">
-                  {DateTime.fromISO(row.createdAt)
-                    .toLocal()
-                    .toLocaleString(DateTime.DATETIME_SHORT)}
-                </TableCell>
-                <TableCell align="right">
-                  {DateTime.fromISO(row.updatedAt)
-                    .toLocal()
-                    .toLocaleString(DateTime.DATETIME_SHORT)}
-                </TableCell>
-                {filterMenuShowDeleted && (
-                  <TableCell align="right">
-                    {row.deletedAt !== null
-                      ? DateTime.fromISO(row.deletedAt)
-                          .toLocal()
-                          .toLocaleString(DateTime.DATETIME_SHORT)
-                      : null}
-                  </TableCell>
-                )}
-              </TableRow>
-            ))}
+            {rows}
             {loading ||
               (cursor && (
                 <TableRow

@@ -1,5 +1,5 @@
 import { NextFunction, Request, Response, Router } from "express";
-import { Op } from "sequelize";
+import { literal, Op, Order } from "sequelize";
 import {
   adminRequiredMiddleware,
   loginRequiredMiddleware,
@@ -53,6 +53,7 @@ router.get(
   async function (req: Request, res: Response, next: NextFunction) {
     try {
       const user = res.locals.user as User;
+      let order: Order = [["updatedAt", "DESC"]];
 
       const filters = JSON.parse(req.query.filters as string);
 
@@ -82,23 +83,21 @@ router.get(
         });
       }
 
-      const count = await Item.count({
-        where: {
-          [Op.and]: whereAnd,
-        },
-        include: [
-          {
-            model: Unit,
-            attributes: ["name"],
-            paranoid: false,
-          },
-          {
-            model: Category,
-            attributes: ["name"],
-            paranoid: false,
-          },
-        ],
-      });
+      const orderQuery = Boolean(req.query.order)
+        ? JSON.parse(req.query.order as string)
+        : null;
+      if (orderQuery) {
+        switch (orderQuery.by) {
+          case "unit":
+            order = [[Unit, "name", orderQuery.direction]];
+            break;
+          case "category":
+            order = [[Category, "name", orderQuery.direction]];
+            break;
+          default:
+            order = [[orderQuery.by, orderQuery.direction]];
+        }
+      }
 
       const cursorQuery = req.query.cursor as string;
       if (cursorQuery !== undefined) {
@@ -146,16 +145,13 @@ router.get(
         where: {
           [Op.and]: whereAnd,
         },
-        order: [
-          ["createdAt", "DESC"],
-          ["id", "DESC"],
-        ],
-        limit: 100,
+        order: order,
+        // limit: 100,
         paranoid: !filters.showDeleted,
       });
 
       res.status(200).json({
-        count: count,
+        count: results.length,
         results: results,
       });
     } catch (error: any) {
@@ -170,6 +166,7 @@ router.get(
   async function (req: Request, res: Response, next: NextFunction) {
     try {
       let whereAnd: any[] = [];
+      let order: Order = [["updatedAt", "DESC"]];
 
       whereAnd.push({
         stock: {
@@ -177,11 +174,21 @@ router.get(
         },
       });
 
-      const count = await Item.count({
-        where: {
-          [Op.and]: whereAnd,
-        },
-      });
+      const orderQuery = Boolean(req.query.order)
+        ? JSON.parse(req.query.order as string)
+        : null;
+      if (orderQuery) {
+        switch (orderQuery.by) {
+          case "unit":
+            order = [[Unit, "name", orderQuery.direction]];
+            break;
+          case "category":
+            order = [[Category, "name", orderQuery.direction]];
+            break;
+          default:
+            order = [[orderQuery.by, orderQuery.direction]];
+        }
+      }
 
       const cursorQuery = req.query.cursor as string;
       if (cursorQuery !== undefined) {
@@ -229,15 +236,12 @@ router.get(
         where: {
           [Op.and]: whereAnd,
         },
-        order: [
-          ["createdAt", "DESC"],
-          ["id", "DESC"],
-        ],
-        limit: 100,
+        order: order,
+        // limit: 100,
       });
 
       res.status(200).json({
-        count: count,
+        count: results.length,
         results: results,
       });
     } catch (error: any) {

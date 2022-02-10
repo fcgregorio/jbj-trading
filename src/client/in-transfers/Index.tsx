@@ -12,6 +12,7 @@ import {
   TableContainer,
   TableHead,
   TableRow,
+  TableSortLabel,
   TextField,
   Tooltip,
   Typography,
@@ -36,6 +37,10 @@ export default function Index() {
   const [search, setSearch] = React.useState<string>("");
   const [date, setDate] = React.useState<DateTime>(DateTime.now());
   const [cursor, setCursor] = React.useState<string | null>(null);
+  const [order, setOrder] = React.useState<{
+    by: string;
+    direction: "asc" | "desc";
+  }>({ by: "updatedAt", direction: "desc" });
 
   const [loading, setLoading] = React.useState(false);
   const cancelTokenSourceRef = React.useRef<CancelTokenSource | null>(null);
@@ -48,8 +53,12 @@ export default function Index() {
       debounce(
         async (
           request: {
-            input: string;
+            search: string;
             date: string | null;
+            order: {
+              by: string;
+              direction: string;
+            };
           },
           startCallback: () => void,
           callback: (results: any) => void,
@@ -62,10 +71,7 @@ export default function Index() {
             .get<{ count: number; results: InTransfer[] }>(
               `/api${location.pathname}`,
               {
-                params: {
-                  search: request.input,
-                  date: request.date,
-                },
+                params: request,
                 cancelToken: cancelToken,
               }
             )
@@ -102,8 +108,9 @@ export default function Index() {
     const cancelTokenSource = axios.CancelToken.source();
     queryInTransfers(
       {
-        input: search,
+        search: search,
         date: date !== null && date.isValid ? date.toISO() : null,
+        order: order,
       },
       () => {
         setCount(null);
@@ -133,7 +140,7 @@ export default function Index() {
     return () => {
       cancelTokenSource.cancel();
     };
-  }, [queryInTransfers, search, date]);
+  }, [queryInTransfers, search, date, order]);
 
   async function handleLoadMoreClick() {
     setLoading(true);
@@ -172,6 +179,83 @@ export default function Index() {
         setLoading(false);
       });
   }
+
+  function handleChangeSort(defaultOrder: {
+    by: string;
+    direction: "asc" | "desc";
+  }) {
+    if (order.by === defaultOrder.by) {
+      setOrder({
+        ...order,
+        direction: order.direction === "asc" ? "desc" : "asc",
+      });
+    } else {
+      setOrder(defaultOrder);
+    }
+  }
+
+  const rows = React.useMemo(() => {
+    return inTransfers.map((row: any) => (
+      <TableRow
+        key={row.transaction + row.item}
+        sx={{
+          "&:last-child td, &:last-child th": { border: 0 },
+        }}
+      >
+        <TableCell>
+          <Tooltip title={row.transaction} placement="right">
+            <Link
+              underline="none"
+              component={RouterLink}
+              to={`/in-transactions/${row.transaction}`}
+              color={"text.primary"}
+            >
+              <Typography fontFamily="monospace" variant="body2">
+                {row.transaction.substring(0, 8)}
+              </Typography>
+            </Link>
+          </Tooltip>
+        </TableCell>
+        <TableCell>
+          <Tooltip title={row.item} placement="right">
+            <Link
+              underline="none"
+              component={RouterLink}
+              to={`/items/${row.item}`}
+              color={"text.primary"}
+            >
+              <Typography fontFamily="monospace" variant="body2">
+                {row.item.substring(0, 8)}
+              </Typography>
+            </Link>
+          </Tooltip>
+        </TableCell>
+        <TableCell>{row.Item.name}</TableCell>
+        <TableCell align="right">
+          <Typography fontFamily="monospace" variant="body2">
+            {row.quantity}
+          </Typography>
+        </TableCell>
+        <TableCell>{row.Item.Unit.name}</TableCell>
+        <TableCell>{row.Item.Category.name}</TableCell>
+        <TableCell align="right">
+          <Typography fontFamily="monospace" variant="body2">
+            {row.InTransaction.void.toString()}
+          </Typography>
+        </TableCell>
+        <TableCell align="right">
+          {DateTime.fromISO(row.createdAt)
+            .toLocal()
+            .toLocaleString(DateTime.DATETIME_SHORT)}
+        </TableCell>
+        <TableCell align="right">
+          {DateTime.fromISO(row.updatedAt)
+            .toLocal()
+            .toLocaleString(DateTime.DATETIME_SHORT)}
+        </TableCell>
+      </TableRow>
+    ));
+  }, [inTransfers]);
 
   return (
     <Stack
@@ -235,19 +319,84 @@ export default function Index() {
             <TableRow>
               <TableCell>In-Transaction ID</TableCell>
               <TableCell>Item ID</TableCell>
-              <TableCell>Item Name</TableCell>
+              <TableCell>
+                <TableSortLabel
+                  active={order.by === "item"}
+                  direction={order.by === "item" ? order.direction : "asc"}
+                  onClick={() => {
+                    handleChangeSort({ by: "item", direction: "asc" });
+                  }}
+                >
+                  Item Name
+                </TableSortLabel>
+              </TableCell>
               <TableCell align="right">Quantity</TableCell>
-              <TableCell>Item Unit</TableCell>
-              <TableCell align="right">Void</TableCell>
-              <TableCell align="right">Created At</TableCell>
-              <TableCell align="right">Updated At</TableCell>
+              <TableCell>
+                <TableSortLabel
+                  active={order.by === "unit"}
+                  direction={order.by === "unit" ? order.direction : "asc"}
+                  onClick={() => {
+                    handleChangeSort({ by: "unit", direction: "asc" });
+                  }}
+                >
+                  Item Unit
+                </TableSortLabel>
+              </TableCell>
+              <TableCell>
+                <TableSortLabel
+                  active={order.by === "category"}
+                  direction={order.by === "category" ? order.direction : "asc"}
+                  onClick={() => {
+                    handleChangeSort({ by: "category", direction: "asc" });
+                  }}
+                >
+                  Item Category
+                </TableSortLabel>
+              </TableCell>
+              <TableCell align="right">
+                <TableSortLabel
+                  active={order.by === "void"}
+                  direction={order.by === "void" ? order.direction : "asc"}
+                  onClick={() => {
+                    handleChangeSort({ by: "void", direction: "asc" });
+                  }}
+                >
+                  Void
+                </TableSortLabel>
+              </TableCell>
+              <TableCell align="right">
+                <TableSortLabel
+                  active={order.by === "createdAt"}
+                  direction={
+                    order.by === "createdAt" ? order.direction : "desc"
+                  }
+                  onClick={() => {
+                    handleChangeSort({ by: "createdAt", direction: "desc" });
+                  }}
+                >
+                  Created At
+                </TableSortLabel>
+              </TableCell>
+              <TableCell align="right">
+                <TableSortLabel
+                  active={order.by === "updatedAt"}
+                  direction={
+                    order.by === "updatedAt" ? order.direction : "desc"
+                  }
+                  onClick={() => {
+                    handleChangeSort({ by: "updatedAt", direction: "desc" });
+                  }}
+                >
+                  Updated At
+                </TableSortLabel>
+              </TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
             {count !== null && (
               <TableRow>
                 <TableCell
-                  colSpan={8}
+                  colSpan={9}
                   align="right"
                   sx={{ background: "rgba(0, 0, 0, 0.06)" }}
                 >
@@ -257,65 +406,7 @@ export default function Index() {
                 </TableCell>
               </TableRow>
             )}
-            {inTransfers.map((row: any) => (
-              <TableRow
-                key={row.transaction + row.item}
-                sx={{
-                  "&:last-child td, &:last-child th": { border: 0 },
-                }}
-              >
-                <TableCell>
-                  <Tooltip title={row.transaction} placement="right">
-                    <Link
-                      underline="none"
-                      component={RouterLink}
-                      to={`/in-transactions/${row.transaction}`}
-                      color={"text.primary"}
-                    >
-                      <Typography fontFamily="monospace" variant="body2">
-                        {row.transaction.substring(0, 8)}
-                      </Typography>
-                    </Link>
-                  </Tooltip>
-                </TableCell>
-                <TableCell>
-                  <Tooltip title={row.item} placement="right">
-                    <Link
-                      underline="none"
-                      component={RouterLink}
-                      to={`/items/${row.item}`}
-                      color={"text.primary"}
-                    >
-                      <Typography fontFamily="monospace" variant="body2">
-                        {row.item.substring(0, 8)}
-                      </Typography>
-                    </Link>
-                  </Tooltip>
-                </TableCell>
-                <TableCell>{row.Item.name}</TableCell>
-                <TableCell align="right">
-                  <Typography fontFamily="monospace" variant="body2">
-                    {row.quantity}
-                  </Typography>
-                </TableCell>
-                <TableCell>{row.Item.Unit.name}</TableCell>
-                <TableCell align="right">
-                  <Typography fontFamily="monospace" variant="body2">
-                    {row.InTransaction.void.toString()}
-                  </Typography>
-                </TableCell>
-                <TableCell align="right">
-                  {DateTime.fromISO(row.createdAt)
-                    .toLocal()
-                    .toLocaleString(DateTime.DATETIME_SHORT)}
-                </TableCell>
-                <TableCell align="right">
-                  {DateTime.fromISO(row.updatedAt)
-                    .toLocal()
-                    .toLocaleString(DateTime.DATETIME_SHORT)}
-                </TableCell>
-              </TableRow>
-            ))}
+            {rows}
             {loading ||
               (cursor && (
                 <TableRow
@@ -325,7 +416,7 @@ export default function Index() {
                   sx={{ cursor: "pointer" }}
                 >
                   <TableCell
-                    colSpan={8}
+                    colSpan={9}
                     align="center"
                     sx={{ background: "rgba(0, 0, 0, 0.06)" }}
                   >
@@ -335,7 +426,7 @@ export default function Index() {
               ))}
             {loading && (
               <TableRow>
-                <TableCell colSpan={8} padding="none">
+                <TableCell colSpan={9} padding="none">
                   <LinearProgress />
                 </TableCell>
               </TableRow>

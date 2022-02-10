@@ -13,6 +13,7 @@ import {
   TableContainer,
   TableHead,
   TableRow,
+  TableSortLabel,
   TextField,
   Tooltip,
   Typography,
@@ -37,6 +38,10 @@ export default function Index() {
   const [search, setSearch] = React.useState<string>("");
   const [date, setDate] = React.useState<DateTime>(DateTime.now());
   const [cursor, setCursor] = React.useState<string | null>(null);
+  const [order, setOrder] = React.useState<{
+    by: string;
+    direction: "asc" | "desc";
+  }>({ by: "updatedAt", direction: "desc" });
 
   const [loading, setLoading] = React.useState(false);
   const cancelTokenSourceRef = React.useRef<CancelTokenSource | null>(null);
@@ -51,8 +56,12 @@ export default function Index() {
       debounce(
         async (
           request: {
-            input: string;
+            search: string;
             date: string | null;
+            order: {
+              by: string;
+              direction: string;
+            };
           },
           startCallback: () => void,
           callback: (results: any) => void,
@@ -65,10 +74,7 @@ export default function Index() {
             .get<{ count: number; results: InTransaction[] }>(
               `/api${location.pathname}`,
               {
-                params: {
-                  search: request.input,
-                  date: request.date,
-                },
+                params: request,
                 cancelToken: cancelToken,
               }
             )
@@ -105,8 +111,9 @@ export default function Index() {
     const cancelTokenSource = axios.CancelToken.source();
     queryInTransactions(
       {
-        input: search,
+        search: search,
         date: date !== null && date.isValid ? date.toISO() : null,
+        order: order,
       },
       () => {
         setCount(null);
@@ -136,7 +143,7 @@ export default function Index() {
     return () => {
       cancelTokenSource.cancel();
     };
-  }, [queryInTransactions, search, date]);
+  }, [queryInTransactions, search, date, order]);
 
   async function handleLoadMoreClick() {
     setLoading(true);
@@ -175,6 +182,77 @@ export default function Index() {
         setLoading(false);
       });
   }
+
+  function handleChangeSort(defaultOrder: {
+    by: string;
+    direction: "asc" | "desc";
+  }) {
+    if (order.by === defaultOrder.by) {
+      setOrder({
+        ...order,
+        direction: order.direction === "asc" ? "desc" : "asc",
+      });
+    } else {
+      setOrder(defaultOrder);
+    }
+  }
+
+  const rows = React.useMemo(() => {
+    return inTransactions.map((row: any) => (
+      <TableRow
+        key={row.id}
+        sx={{
+          "&:last-child td, &:last-child th": { border: 0 },
+        }}
+      >
+        <TableCell>
+          <Tooltip title={row.id} placement="right">
+            <Link
+              underline="none"
+              component={RouterLink}
+              to={row.id}
+              color={"text.primary"}
+            >
+              <Typography fontFamily="monospace" variant="body2">
+                {row.id.substring(0, 8)}
+              </Typography>
+            </Link>
+          </Tooltip>
+        </TableCell>
+        <TableCell>{row.supplier}</TableCell>
+        <TableCell>{row.deliveryReceipt}</TableCell>
+        <TableCell align="right">
+          {row.dateOfDeliveryReceipt !== null
+            ? DateTime.fromISO(row.dateOfDeliveryReceipt)
+                .toLocal()
+                .toLocaleString(DateTime.DATE_SHORT)
+            : ""}
+        </TableCell>
+        <TableCell align="right">
+          {row.dateReceived !== null
+            ? DateTime.fromISO(row.dateReceived)
+                .toLocal()
+                .toLocaleString(DateTime.DATE_SHORT)
+            : ""}
+        </TableCell>
+        <TableCell align="right">
+          <Typography fontFamily="monospace" variant="body2">
+            {row.void.toString()}
+          </Typography>
+        </TableCell>
+        <TableCell align="right">
+          {DateTime.fromISO(row.createdAt)
+            .toLocal()
+            .toLocaleString(DateTime.DATETIME_SHORT)}
+        </TableCell>
+        <TableCell align="right">
+          {DateTime.fromISO(row.updatedAt)
+            .toLocal()
+            .toLocaleString(DateTime.DATETIME_SHORT)}
+        </TableCell>
+      </TableRow>
+    ));
+  }, [inTransactions]);
 
   return (
     <Stack
@@ -248,13 +326,101 @@ export default function Index() {
           <TableHead>
             <TableRow>
               <TableCell>ID</TableCell>
-              <TableCell>Supplier</TableCell>
-              <TableCell>Delivery Receipt</TableCell>
-              <TableCell align="right">Date of Delivery Receipt</TableCell>
-              <TableCell align="right">Date Received</TableCell>
-              <TableCell align="right">Void</TableCell>
-              <TableCell align="right">Created At</TableCell>
-              <TableCell align="right">Updated At</TableCell>
+              <TableCell>
+                <TableSortLabel
+                  active={order.by === "supplier"}
+                  direction={order.by === "supplier" ? order.direction : "asc"}
+                  onClick={() => {
+                    handleChangeSort({ by: "supplier", direction: "asc" });
+                  }}
+                >
+                  Supplier
+                </TableSortLabel>
+              </TableCell>
+              <TableCell>
+                <TableSortLabel
+                  active={order.by === "deliveryReceipt"}
+                  direction={
+                    order.by === "deliveryReceipt" ? order.direction : "asc"
+                  }
+                  onClick={() => {
+                    handleChangeSort({
+                      by: "deliveryReceipt",
+                      direction: "asc",
+                    });
+                  }}
+                >
+                  Delivery Receipt
+                </TableSortLabel>
+              </TableCell>
+              <TableCell align="right">
+                <TableSortLabel
+                  active={order.by === "dateOfDeliveryReceipt"}
+                  direction={
+                    order.by === "dateOfDeliveryReceipt"
+                      ? order.direction
+                      : "desc"
+                  }
+                  onClick={() => {
+                    handleChangeSort({
+                      by: "dateOfDeliveryReceipt",
+                      direction: "desc",
+                    });
+                  }}
+                >
+                  Date of Delivery Receipt
+                </TableSortLabel>
+              </TableCell>
+              <TableCell align="right">
+                <TableSortLabel
+                  active={order.by === "dateReceived"}
+                  direction={
+                    order.by === "dateReceived" ? order.direction : "desc"
+                  }
+                  onClick={() => {
+                    handleChangeSort({ by: "dateReceived", direction: "desc" });
+                  }}
+                >
+                  Date Received
+                </TableSortLabel>
+              </TableCell>
+              <TableCell align="right">
+                <TableSortLabel
+                  active={order.by === "void"}
+                  direction={order.by === "void" ? order.direction : "asc"}
+                  onClick={() => {
+                    handleChangeSort({ by: "void", direction: "asc" });
+                  }}
+                >
+                  Void
+                </TableSortLabel>
+              </TableCell>
+              <TableCell align="right">
+                <TableSortLabel
+                  active={order.by === "createdAt"}
+                  direction={
+                    order.by === "createdAt" ? order.direction : "desc"
+                  }
+                  onClick={() => {
+                    handleChangeSort({ by: "createdAt", direction: "desc" });
+                  }}
+                >
+                  Created At
+                </TableSortLabel>
+              </TableCell>
+              <TableCell align="right">
+                <TableSortLabel
+                  active={order.by === "updatedAt"}
+                  direction={
+                    order.by === "updatedAt" ? order.direction : "desc"
+                  }
+                  onClick={() => {
+                    handleChangeSort({ by: "updatedAt", direction: "desc" });
+                  }}
+                >
+                  Updated At
+                </TableSortLabel>
+              </TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -271,60 +437,7 @@ export default function Index() {
                 </TableCell>
               </TableRow>
             )}
-            {inTransactions.map((row: any) => (
-              <TableRow
-                key={row.id}
-                sx={{
-                  "&:last-child td, &:last-child th": { border: 0 },
-                }}
-              >
-                <TableCell>
-                  <Tooltip title={row.id} placement="right">
-                    <Link
-                      underline="none"
-                      component={RouterLink}
-                      to={row.id}
-                      color={"text.primary"}
-                    >
-                      <Typography fontFamily="monospace" variant="body2">
-                        {row.id.substring(0, 8)}
-                      </Typography>
-                    </Link>
-                  </Tooltip>
-                </TableCell>
-                <TableCell>{row.supplier}</TableCell>
-                <TableCell>{row.deliveryReceipt}</TableCell>
-                <TableCell align="right">
-                  {row.dateOfDeliveryReceipt !== null
-                    ? DateTime.fromISO(row.dateOfDeliveryReceipt)
-                        .toLocal()
-                        .toLocaleString(DateTime.DATE_SHORT)
-                    : ""}
-                </TableCell>
-                <TableCell align="right">
-                  {row.dateReceived !== null
-                    ? DateTime.fromISO(row.dateReceived)
-                        .toLocal()
-                        .toLocaleString(DateTime.DATE_SHORT)
-                    : ""}
-                </TableCell>
-                <TableCell align="right">
-                  <Typography fontFamily="monospace" variant="body2">
-                    {row.void.toString()}
-                  </Typography>
-                </TableCell>
-                <TableCell align="right">
-                  {DateTime.fromISO(row.createdAt)
-                    .toLocal()
-                    .toLocaleString(DateTime.DATETIME_SHORT)}
-                </TableCell>
-                <TableCell align="right">
-                  {DateTime.fromISO(row.updatedAt)
-                    .toLocal()
-                    .toLocaleString(DateTime.DATETIME_SHORT)}
-                </TableCell>
-              </TableRow>
-            ))}
+            {rows}
             {loading ||
               (cursor && (
                 <TableRow

@@ -11,10 +11,12 @@ import {
   TableContainer,
   TableHead,
   TableRow,
+  TableSortLabel,
   Tooltip,
   Typography,
 } from "@mui/material";
 import axios, { CancelToken, CancelTokenSource } from "axios";
+import { request } from "https";
 import { debounce } from "lodash";
 import { useSnackbar } from "notistack";
 import * as React from "react";
@@ -30,6 +32,10 @@ export default () => {
   const [authContext] = React.useContext(AuthContext);
 
   const [cursor, setCursor] = React.useState<string | null>(null);
+  const [order, setOrder] = React.useState<{
+    by: string;
+    direction: "asc" | "desc";
+  }>({ by: "updatedAt", direction: "desc" });
 
   const [loading, setLoading] = React.useState(false);
   const cancelTokenSourceRef = React.useRef<CancelTokenSource | null>(null);
@@ -47,6 +53,12 @@ export default () => {
     () =>
       debounce(
         async (
+          request: {
+            order: {
+              by: string;
+              direction: string;
+            };
+          },
           startCallback: () => void,
           callback: (results: { count: number; results: Item[] }) => void,
           errorCallback: () => void,
@@ -56,6 +68,7 @@ export default () => {
           startCallback();
           await axios
             .get<{ count: number; results: Item[] }>(`/api/items/alerts`, {
+              params: request,
               cancelToken: cancelToken,
             })
             .then((result) => result.data)
@@ -83,6 +96,7 @@ export default () => {
 
     const cancelTokenSource = axios.CancelToken.source();
     queryItems(
+      { order: order },
       () => {
         setCount(null);
         setItems([]);
@@ -111,7 +125,7 @@ export default () => {
     return () => {
       cancelTokenSource.cancel();
     };
-  }, [queryItems, click]);
+  }, [queryItems, click, order]);
 
   async function handleLoadMoreClick() {
     setLoading(true);
@@ -145,6 +159,57 @@ export default () => {
         setLoading(false);
       });
   }
+
+  function handleChangeSort(defaultOrder: {
+    by: string;
+    direction: "asc" | "desc";
+  }) {
+    if (order.by === defaultOrder.by) {
+      setOrder({
+        ...order,
+        direction: order.direction === "asc" ? "desc" : "asc",
+      });
+    } else {
+      setOrder(defaultOrder);
+    }
+  }
+
+  const rows = React.useMemo(() => {
+    return items.map((row: any) => (
+      <TableRow
+        key={row.name}
+        sx={{ "&:last-child td, &:last-child th": { border: 0 } }}
+      >
+        <TableCell>
+          <Tooltip title={row.id} placement="right">
+            <Link
+              underline="none"
+              component={RouterLink}
+              to={`/items/${row.id}`}
+              color={"text.primary"}
+            >
+              <Typography fontFamily="monospace" variant="body2">
+                {row.id.substring(0, 8)}
+              </Typography>
+            </Link>
+          </Tooltip>
+        </TableCell>
+        <TableCell>{row.name}</TableCell>
+        <TableCell align="right">
+          <Typography fontFamily="monospace" variant="body2">
+            {row.stock}
+          </Typography>
+        </TableCell>
+        <TableCell align="right">
+          <Typography fontFamily="monospace" variant="body2">
+            {row.safetyStock}
+          </Typography>
+        </TableCell>
+        <TableCell>{row.Unit.name}</TableCell>
+        <TableCell>{row.Category.name}</TableCell>
+      </TableRow>
+    ));
+  }, [items]);
 
   return (
     <Stack
@@ -191,11 +256,41 @@ export default () => {
           <TableHead>
             <TableRow>
               <TableCell>ID</TableCell>
-              <TableCell>Name</TableCell>
+              <TableCell>
+                <TableSortLabel
+                  active={order.by === "name"}
+                  direction={order.by === "name" ? order.direction : "asc"}
+                  onClick={() => {
+                    handleChangeSort({ by: "name", direction: "asc" });
+                  }}
+                >
+                  Name
+                </TableSortLabel>
+              </TableCell>
               <TableCell align="right">Stock</TableCell>
               <TableCell align="right">Safety Stock</TableCell>
-              <TableCell>Unit</TableCell>
-              <TableCell>Category</TableCell>
+              <TableCell>
+                <TableSortLabel
+                  active={order.by === "unit"}
+                  direction={order.by === "unit" ? order.direction : "asc"}
+                  onClick={() => {
+                    handleChangeSort({ by: "unit", direction: "asc" });
+                  }}
+                >
+                  Unit
+                </TableSortLabel>
+              </TableCell>
+              <TableCell>
+                <TableSortLabel
+                  active={order.by === "category"}
+                  direction={order.by === "category" ? order.direction : "asc"}
+                  onClick={() => {
+                    handleChangeSort({ by: "category", direction: "asc" });
+                  }}
+                >
+                  Category
+                </TableSortLabel>
+              </TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -212,40 +307,7 @@ export default () => {
                 </TableCell>
               </TableRow>
             )}
-            {items.map((row: any) => (
-              <TableRow
-                key={row.name}
-                sx={{ "&:last-child td, &:last-child th": { border: 0 } }}
-              >
-                <TableCell>
-                  <Tooltip title={row.id} placement="right">
-                    <Link
-                      underline="none"
-                      component={RouterLink}
-                      to={`/items/${row.id}`}
-                      color={"text.primary"}
-                    >
-                      <Typography fontFamily="monospace" variant="body2">
-                        {row.id.substring(0, 8)}
-                      </Typography>
-                    </Link>
-                  </Tooltip>
-                </TableCell>
-                <TableCell>{row.name}</TableCell>
-                <TableCell align="right">
-                  <Typography fontFamily="monospace" variant="body2">
-                    {row.stock}
-                  </Typography>
-                </TableCell>
-                <TableCell align="right">
-                  <Typography fontFamily="monospace" variant="body2">
-                    {row.safetyStock}
-                  </Typography>
-                </TableCell>
-                <TableCell>{row.Unit.name}</TableCell>
-                <TableCell>{row.Category.name}</TableCell>
-              </TableRow>
-            ))}
+            {rows}
             {loading ||
               (cursor && (
                 <TableRow

@@ -1,7 +1,7 @@
 import excel from "exceljs";
 import { NextFunction, Request, Response, Router } from "express";
 import { DateTime } from "luxon";
-import { literal, Op, QueryTypes } from "sequelize";
+import { literal, Op, Order, QueryTypes } from "sequelize";
 import tmp from "tmp";
 import {
   adminRequiredMiddleware,
@@ -27,17 +27,7 @@ router.get(
   async function (req: Request, res: Response, next: NextFunction) {
     try {
       let whereAnd: any[] = [];
-      whereAnd.push({
-        [Op.or]: [
-          literal("`InTransaction.id` IS NOT NULL"),
-          literal("`OutTransaction.id` IS NOT NULL"),
-        ],
-      });
-
-      let countQueryWhere = ``;
-      let countQueryInTransactionJoin = ``;
-      let countQueryOutTransactionJoin = ``;
-      let countQueryReplacements = {};
+      let order: Order = [["updatedAt", "DESC"]];
 
       const dateQuery = req.query.date as string;
       if (dateQuery !== undefined) {
@@ -48,25 +38,6 @@ router.get(
           res.status(400).send("Invalid date");
           return;
         } else {
-          countQueryWhere =
-            countQueryWhere +
-            `(
-                        'Transaction'.'createdAt' >= :startDate
-                        AND
-                        'Transaction'.'createdAt' <= :endDate
-                    )`;
-          countQueryReplacements = {
-            ...countQueryReplacements,
-            startDate: date
-              .startOf("day")
-              .setZone("utc")
-              .toFormat("yyyy-LL-dd HH:mm:ss ZZ"),
-            endDate: date
-              .endOf("day")
-              .setZone("utc")
-              .toFormat("yyyy-LL-dd HH:mm:ss ZZ"),
-          };
-
           whereAnd.push({
             createdAt: {
               [Op.gte]: date.startOf("day").toJSDate(),
@@ -76,56 +47,65 @@ router.get(
         }
       }
 
-      let whereInTransactionAnd: any[] = [];
-      let whereOutTransactionAnd: any[] = [];
       const searchQuery = req.query.search as string;
       if (searchQuery !== undefined && searchQuery !== "") {
-        countQueryInTransactionJoin =
-          countQueryInTransactionJoin +
-          `
-                    AND 'InTransaction'.'supplier' LIKE :searchQuery
-                `;
-        countQueryOutTransactionJoin =
-          countQueryOutTransactionJoin +
-          `
-                    AND 'OutTransaction'.'customer' LIKE :searchQuery
-                `;
-        countQueryReplacements = {
-          ...countQueryReplacements,
-          searchQuery: `%${searchQuery}%`,
-        };
-
-        whereInTransactionAnd.push({
-          supplier: {
-            [Op.like]: `%${searchQuery}%`, // TODO
-          },
-        });
-        whereOutTransactionAnd.push({
-          customer: {
-            [Op.like]: `%${searchQuery}%`, // TODO
+        whereAnd.push({
+          [Op.or]: {
+            "$InTransaction.supplier$": {
+              [Op.like]: `%${searchQuery}%`, // TODO
+            },
+            "$InTransaction.deliveryReceipt$": {
+              [Op.like]: `%${searchQuery}%`, // TODO
+            },
+            "$OutTransaction.customer$": {
+              [Op.like]: `%${searchQuery}%`, // TODO
+            },
+            "$OutTransaction.deliveryReceipt$": {
+              [Op.like]: `%${searchQuery}%`, // TODO
+            },
           },
         });
       }
 
-      const count = await sequelize.query(
-        `SELECT
-                (count('InTransaction'.'id') + count('OutTransaction'.'id')) AS 'count'
-            FROM
-                'transactions' AS 'Transaction'
-            LEFT OUTER JOIN 'in_transactions' AS 'InTransaction'
-                ON 'Transaction'.'inTransaction' = 'InTransaction'.'id'
-                ${countQueryInTransactionJoin}
-            LEFT OUTER JOIN 'out_transactions' AS 'OutTransaction'
-                ON 'Transaction'.'outTransaction' = 'OutTransaction'.'id'
-                ${countQueryOutTransactionJoin}
-            WHERE ${countQueryWhere}
-            ;`,
-        {
-          type: QueryTypes.SELECT,
-          replacements: countQueryReplacements,
-          raw: true,
+      const orderQuery = Boolean(req.query.order)
+        ? JSON.parse(req.query.order as string)
+        : null;
+      if (orderQuery) {
+        switch (orderQuery.by) {
+          case "supplier":
+            order = [[InTransaction, "supplier", orderQuery.direction]];
+            break;
+          case "customer":
+            order = [[OutTransaction, "customer", orderQuery.direction]];
+            break;
+          case "deliveryReceipt":
+            order = [
+              literal(
+                `IFNULL(\`InTransaction.deliveryReceipt\`, \`OutTransaction.deliveryReceipt\`) ${orderQuery.direction}`
+              ),
+            ];
+            break;
+          case "dateOfDeliveryReceipt":
+            order = [
+              literal(
+                `IFNULL(\`InTransaction.dateOfDeliveryReceipt\`, \`OutTransaction.dateOfDeliveryReceipt\`) ${orderQuery.direction}`
+              ),
+            ];
+            break;
+          case "dateReceived":
+            order = [[InTransaction, "dateReceived", orderQuery.direction]];
+            break;
+          case "void":
+            order = [
+              literal(
+                `IFNULL(\`InTransaction.void\`, \`OutTransaction.void\`) ${orderQuery.direction}`
+              ),
+            ];
+            break;
+          default:
+            order = [[orderQuery.by, orderQuery.direction]];
         }
-      );
+      }
 
       const cursorQuery = req.query.cursor as string;
       if (cursorQuery !== undefined) {
@@ -162,30 +142,21 @@ router.get(
           {
             model: InTransaction,
             required: false,
-            where: {
-              [Op.and]: whereInTransactionAnd,
-            },
           },
           {
             model: OutTransaction,
             required: false,
-            where: {
-              [Op.and]: whereOutTransactionAnd,
-            },
           },
         ],
         where: {
           [Op.and]: whereAnd,
         },
-        order: [
-          ["createdAt", "DESC"],
-          ["id", "DESC"],
-        ],
-        limit: 100,
+        order: order,
+        // limit: 100,
       });
 
       res.status(200).json({
-        count: (count[0] as any).count,
+        count: results.length,
         results: results,
       });
     } catch (error: any) {

@@ -1,5 +1,5 @@
 import { NextFunction, Request, Response, Router } from "express";
-import { Op } from "sequelize";
+import { Op, Order } from "sequelize";
 import {
   adminRequiredMiddleware,
   loginRequiredMiddleware,
@@ -40,6 +40,7 @@ router.get(
   async function (req: Request, res: Response, next: NextFunction) {
     try {
       const user = res.locals.user as User;
+      let order: Order = [["updatedAt", "DESC"]];
 
       const filters = JSON.parse(req.query.filters as string);
 
@@ -58,11 +59,12 @@ router.get(
         });
       }
 
-      const count = await Unit.count({
-        where: {
-          [Op.and]: whereAnd,
-        },
-      });
+      const orderQuery = Boolean(req.query.order)
+        ? JSON.parse(req.query.order as string)
+        : null;
+      if (orderQuery) {
+        order = [[orderQuery.by, orderQuery.direction]];
+      }
 
       const cursorQuery = req.query.cursor as string;
       if (cursorQuery !== undefined) {
@@ -98,16 +100,13 @@ router.get(
         where: {
           [Op.and]: whereAnd,
         },
-        order: [
-          ["createdAt", "DESC"],
-          ["id", "DESC"],
-        ],
-        limit: 100,
+        order: order,
+        // limit: 100,
         paranoid: !filters.showDeleted,
       });
 
       res.status(200).json({
-        count: count,
+        count: results.length,
         results: results,
       });
     } catch (error) {

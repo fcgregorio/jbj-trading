@@ -1,8 +1,14 @@
 import { NextFunction, Request, Response, Router } from "express";
 import { DateTime } from "luxon";
-import { Op } from "sequelize";
+import { Op, Order } from "sequelize";
 import { loginRequiredMiddleware } from "../../middleware/auth";
-import { Item, OutTransaction, OutTransfer, Unit } from "../../sequelize";
+import {
+  Category,
+  Item,
+  OutTransaction,
+  OutTransfer,
+  Unit,
+} from "../../sequelize";
 
 const router = Router();
 router.use(loginRequiredMiddleware);
@@ -56,6 +62,7 @@ router.get(
   async function (req: Request, res: Response, next: NextFunction) {
     try {
       let whereAnd: any[] = [];
+      let order: Order = [["updatedAt", "DESC"]];
 
       const dateQuery = req.query.date as string;
       if (dateQuery !== undefined) {
@@ -75,32 +82,44 @@ router.get(
         }
       }
 
-      let whereItemAnd: any[] = [];
-
       const searchQuery = req.query.search as string;
       if (searchQuery !== undefined && searchQuery !== "") {
-        whereItemAnd.push({
-          name: {
-            [Op.like]: `%${searchQuery}%`, // TODO
+        whereAnd.push({
+          [Op.or]: {
+            "$Item.name$": {
+              [Op.like]: `%${searchQuery}%`, // TODO
+            },
+            "$Item.Unit.name$": {
+              [Op.like]: `%${searchQuery}%`, // TODO
+            },
+            "$Item.Category.name$": {
+              [Op.like]: `%${searchQuery}%`, // TODO
+            },
           },
         });
       }
 
-      const count = await OutTransfer.count({
-        include: [
-          {
-            model: Item,
-            attributes: ["id", "name"],
-            paranoid: false,
-            where: {
-              [Op.and]: whereItemAnd,
-            },
-          },
-        ],
-        where: {
-          [Op.and]: whereAnd,
-        },
-      });
+      const orderQuery = Boolean(req.query.order)
+        ? JSON.parse(req.query.order as string)
+        : null;
+      if (orderQuery) {
+        switch (orderQuery.by) {
+          case "item":
+            order = [[Item, "name", orderQuery.direction]];
+            break;
+          case "unit":
+            order = [[Item, Unit, "name", orderQuery.direction]];
+            break;
+          case "category":
+            order = [[Item, Category, "name", orderQuery.direction]];
+            break;
+          case "void":
+            order = [[OutTransaction, "void", orderQuery.direction]];
+            break;
+          default:
+            order = [[orderQuery.by, orderQuery.direction]];
+        }
+      }
 
       const cursorQuery = req.query.cursor as string;
       if (cursorQuery !== undefined) {
@@ -148,24 +167,23 @@ router.get(
                 attributes: ["name"],
                 paranoid: false,
               },
+              {
+                model: Category,
+                attributes: ["name"],
+                paranoid: false,
+              },
             ],
-            where: {
-              [Op.and]: whereItemAnd,
-            },
           },
         ],
         where: {
           [Op.and]: whereAnd,
         },
-        order: [
-          ["createdAt", "DESC"],
-          ["id", "DESC"],
-        ],
-        limit: 100,
+        order: order,
+        // limit: 100,
       });
 
       res.status(200).json({
-        count: count,
+        count: results.length,
         results: results,
       });
     } catch (error: any) {
@@ -191,6 +209,11 @@ router.get(
             include: [
               {
                 model: Unit,
+                attributes: ["name"],
+                paranoid: false,
+              },
+              {
+                model: Category,
                 attributes: ["name"],
                 paranoid: false,
               },

@@ -12,6 +12,7 @@ import {
   TableContainer,
   TableHead,
   TableRow,
+  TableSortLabel,
   TextField,
   Tooltip,
   Typography,
@@ -36,6 +37,10 @@ export default function Index() {
   const [search, setSearch] = React.useState<string>("");
   const [date, setDate] = React.useState<DateTime>(DateTime.now());
   const [cursor, setCursor] = React.useState<string | null>(null);
+  const [order, setOrder] = React.useState<{
+    by: string;
+    direction: "asc" | "desc";
+  }>({ by: "updatedAt", direction: "desc" });
 
   const [loading, setLoading] = React.useState(false);
   const cancelTokenSourceRef = React.useRef<CancelTokenSource | null>(null);
@@ -48,8 +53,12 @@ export default function Index() {
       debounce(
         async (
           request: {
-            input: string;
+            search: string;
             date: string | null;
+            order: {
+              by: string;
+              direction: string;
+            };
           },
           startCallback: () => void,
           callback: (results: any) => void,
@@ -62,10 +71,7 @@ export default function Index() {
             .get<{ count: number; results: Transfer[] }>(
               `/api${location.pathname}`,
               {
-                params: {
-                  search: request.input,
-                  date: request.date,
-                },
+                params: request,
                 cancelToken: cancelToken,
               }
             )
@@ -102,8 +108,9 @@ export default function Index() {
     const cancelTokenSource = axios.CancelToken.source();
     queryTransfers(
       {
-        input: search,
+        search: search,
         date: date !== null && date.isValid ? date.toISO() : null,
+        order: order,
       },
       () => {
         setCount(null);
@@ -133,7 +140,7 @@ export default function Index() {
     return () => {
       cancelTokenSource.cancel();
     };
-  }, [queryTransfers, search, date]);
+  }, [queryTransfers, search, date, order]);
 
   async function handleLoadMoreClick() {
     setLoading(true);
@@ -169,6 +176,134 @@ export default function Index() {
         setLoading(false);
       });
   }
+
+  function handleChangeSort(defaultOrder: {
+    by: string;
+    direction: "asc" | "desc";
+  }) {
+    if (order.by === defaultOrder.by) {
+      setOrder({
+        ...order,
+        direction: order.direction === "asc" ? "desc" : "asc",
+      });
+    } else {
+      setOrder(defaultOrder);
+    }
+  }
+
+  const rows = React.useMemo(() => {
+    return transfers.map((row: any) => (
+      <TableRow
+        key={row.id}
+        sx={{
+          "&:last-child td, &:last-child th": { border: 0 },
+        }}
+      >
+        {row.InTransfer && (
+          <React.Fragment>
+            <TableCell>
+              <Typography fontFamily="monospace" variant="body2">
+                In
+              </Typography>
+            </TableCell>
+            <TableCell>
+              <Tooltip title={row.InTransfer.transaction} placement="right">
+                <Link
+                  underline="none"
+                  component={RouterLink}
+                  to={`/in-transactions/${row.InTransfer!.transaction}`}
+                  color={"text.primary"}
+                >
+                  <Typography fontFamily="monospace" variant="body2">
+                    {row.InTransfer.transaction.substring(0, 8)}
+                  </Typography>
+                </Link>
+              </Tooltip>
+            </TableCell>
+            <TableCell>
+              <Tooltip title={row.InTransfer.item} placement="right">
+                <Link
+                  underline="none"
+                  component={RouterLink}
+                  to={`/items/${row.InTransfer.item}`}
+                  color={"text.primary"}
+                >
+                  <Typography fontFamily="monospace" variant="body2">
+                    {row.InTransfer.item.substring(0, 8)}
+                  </Typography>
+                </Link>
+              </Tooltip>
+            </TableCell>
+            <TableCell>{row.InTransfer.Item.name}</TableCell>
+            <TableCell align="right">{row.InTransfer.quantity}</TableCell>
+            <TableCell>{row.InTransfer.Item.Unit.name}</TableCell>
+            <TableCell>{row.InTransfer.Item.Category.name}</TableCell>
+            <TableCell align="right">
+              <Typography fontFamily="monospace" variant="body2">
+                {row.InTransfer.InTransaction.void.toString()}
+              </Typography>
+            </TableCell>
+          </React.Fragment>
+        )}
+        {row.OutTransfer && (
+          <React.Fragment>
+            <TableCell>
+              <Typography fontFamily="monospace" variant="body2">
+                Out
+              </Typography>
+            </TableCell>
+            <TableCell>
+              <Tooltip title={row.OutTransfer.transaction} placement="right">
+                <Link
+                  underline="none"
+                  component={RouterLink}
+                  to={`/out-transactions/${row.OutTransfer!.transaction}`}
+                  color={"text.primary"}
+                >
+                  <Typography fontFamily="monospace" variant="body2">
+                    {row.OutTransfer.transaction.substring(0, 8)}
+                  </Typography>
+                </Link>
+              </Tooltip>
+            </TableCell>
+            <TableCell>
+              <Tooltip title={row.OutTransfer.item} placement="right">
+                <Link
+                  underline="none"
+                  component={RouterLink}
+                  to={`/items/${row.OutTransfer.item}`}
+                  color={"text.primary"}
+                >
+                  <Typography fontFamily="monospace" variant="body2">
+                    {row.OutTransfer.item.substring(0, 8)}
+                  </Typography>
+                </Link>
+              </Tooltip>
+            </TableCell>
+            <TableCell>{row.OutTransfer.Item.name}</TableCell>
+            <TableCell align="right">{row.OutTransfer.quantity}</TableCell>
+            <TableCell>{row.OutTransfer.Item.Unit.name}</TableCell>
+            <TableCell>{row.OutTransfer.Item.Category.name}</TableCell>
+            <TableCell align="right">
+              <Typography fontFamily="monospace" variant="body2">
+                {row.OutTransfer.OutTransaction.void.toString()}
+              </Typography>
+            </TableCell>
+          </React.Fragment>
+        )}
+        <TableCell align="right">
+          {DateTime.fromISO(row.createdAt)
+            .toLocal()
+            .toLocaleString(DateTime.DATETIME_SHORT)}
+        </TableCell>
+        <TableCell align="right">
+          {DateTime.fromISO(row.updatedAt)
+            .toLocal()
+            .toLocaleString(DateTime.DATETIME_SHORT)}
+        </TableCell>
+      </TableRow>
+    ));
+  }, [transfers]);
 
   return (
     <Stack
@@ -233,19 +368,84 @@ export default function Index() {
               <TableCell>Type</TableCell>
               <TableCell>Transaction ID</TableCell>
               <TableCell>Item ID</TableCell>
-              <TableCell>Item Name</TableCell>
+              <TableCell>
+                <TableSortLabel
+                  active={order.by === "item"}
+                  direction={order.by === "item" ? order.direction : "asc"}
+                  onClick={() => {
+                    handleChangeSort({ by: "item", direction: "asc" });
+                  }}
+                >
+                  Item Name
+                </TableSortLabel>
+              </TableCell>
               <TableCell align="right">Quantity</TableCell>
-              <TableCell>Item Unit</TableCell>
-              <TableCell align="right">Void</TableCell>
-              <TableCell align="right">Created At</TableCell>
-              <TableCell align="right">Updated At</TableCell>
+              <TableCell>
+                <TableSortLabel
+                  active={order.by === "unit"}
+                  direction={order.by === "unit" ? order.direction : "asc"}
+                  onClick={() => {
+                    handleChangeSort({ by: "unit", direction: "asc" });
+                  }}
+                >
+                  Item Unit
+                </TableSortLabel>
+              </TableCell>
+              <TableCell>
+                <TableSortLabel
+                  active={order.by === "category"}
+                  direction={order.by === "category" ? order.direction : "asc"}
+                  onClick={() => {
+                    handleChangeSort({ by: "category", direction: "asc" });
+                  }}
+                >
+                  Item Category
+                </TableSortLabel>
+              </TableCell>
+              <TableCell align="right">
+                <TableSortLabel
+                  active={order.by === "void"}
+                  direction={order.by === "void" ? order.direction : "asc"}
+                  onClick={() => {
+                    handleChangeSort({ by: "void", direction: "asc" });
+                  }}
+                >
+                  Void
+                </TableSortLabel>
+              </TableCell>
+              <TableCell align="right">
+                <TableSortLabel
+                  active={order.by === "createdAt"}
+                  direction={
+                    order.by === "createdAt" ? order.direction : "desc"
+                  }
+                  onClick={() => {
+                    handleChangeSort({ by: "createdAt", direction: "desc" });
+                  }}
+                >
+                  Created At
+                </TableSortLabel>
+              </TableCell>
+              <TableCell align="right">
+                <TableSortLabel
+                  active={order.by === "updatedAt"}
+                  direction={
+                    order.by === "updatedAt" ? order.direction : "desc"
+                  }
+                  onClick={() => {
+                    handleChangeSort({ by: "updatedAt", direction: "desc" });
+                  }}
+                >
+                  Updated At
+                </TableSortLabel>
+              </TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
             {count !== null && (
               <TableRow>
                 <TableCell
-                  colSpan={9}
+                  colSpan={10}
                   align="right"
                   sx={{ background: "rgba(0, 0, 0, 0.06)" }}
                 >
@@ -255,127 +455,7 @@ export default function Index() {
                 </TableCell>
               </TableRow>
             )}
-            {transfers.map((row: any) => (
-              <TableRow
-                key={row.id}
-                sx={{
-                  "&:last-child td, &:last-child th": { border: 0 },
-                }}
-              >
-                {row.InTransfer && (
-                  <React.Fragment>
-                    <TableCell>
-                      <Typography fontFamily="monospace" variant="body2">
-                        In
-                      </Typography>
-                    </TableCell>
-                    <TableCell>
-                      <Tooltip
-                        title={row.InTransfer.transaction}
-                        placement="right"
-                      >
-                        <Link
-                          underline="none"
-                          component={RouterLink}
-                          to={`/in-transactions/${row.InTransfer!.transaction}`}
-                          color={"text.primary"}
-                        >
-                          <Typography fontFamily="monospace" variant="body2">
-                            {row.InTransfer.transaction.substring(0, 8)}
-                          </Typography>
-                        </Link>
-                      </Tooltip>
-                    </TableCell>
-                    <TableCell>
-                      <Tooltip title={row.InTransfer.item} placement="right">
-                        <Link
-                          underline="none"
-                          component={RouterLink}
-                          to={`/items/${row.InTransfer.item}`}
-                          color={"text.primary"}
-                        >
-                          <Typography fontFamily="monospace" variant="body2">
-                            {row.InTransfer.item.substring(0, 8)}
-                          </Typography>
-                        </Link>
-                      </Tooltip>
-                    </TableCell>
-                    <TableCell>{row.InTransfer.Item.name}</TableCell>
-                    <TableCell align="right">
-                      {row.InTransfer.quantity}
-                    </TableCell>
-                    <TableCell>{row.InTransfer.Item.Unit.name}</TableCell>
-                    <TableCell align="right">
-                      <Typography fontFamily="monospace" variant="body2">
-                        {row.InTransfer.InTransaction.void.toString()}
-                      </Typography>
-                    </TableCell>
-                  </React.Fragment>
-                )}
-                {row.OutTransfer && (
-                  <React.Fragment>
-                    <TableCell>
-                      <Typography fontFamily="monospace" variant="body2">
-                        Out
-                      </Typography>
-                    </TableCell>
-                    <TableCell>
-                      <Tooltip
-                        title={row.OutTransfer.transaction}
-                        placement="right"
-                      >
-                        <Link
-                          underline="none"
-                          component={RouterLink}
-                          to={`/out-transactions/${
-                            row.OutTransfer!.transaction
-                          }`}
-                          color={"text.primary"}
-                        >
-                          <Typography fontFamily="monospace" variant="body2">
-                            {row.OutTransfer.transaction.substring(0, 8)}
-                          </Typography>
-                        </Link>
-                      </Tooltip>
-                    </TableCell>
-                    <TableCell>
-                      <Tooltip title={row.OutTransfer.item} placement="right">
-                        <Link
-                          underline="none"
-                          component={RouterLink}
-                          to={`/items/${row.OutTransfer.item}`}
-                          color={"text.primary"}
-                        >
-                          <Typography fontFamily="monospace" variant="body2">
-                            {row.OutTransfer.item.substring(0, 8)}
-                          </Typography>
-                        </Link>
-                      </Tooltip>
-                    </TableCell>
-                    <TableCell>{row.OutTransfer.Item.name}</TableCell>
-                    <TableCell align="right">
-                      {row.OutTransfer.quantity}
-                    </TableCell>
-                    <TableCell>{row.OutTransfer.Item.Unit.name}</TableCell>
-                    <TableCell align="right">
-                      <Typography fontFamily="monospace" variant="body2">
-                        {row.OutTransfer.OutTransaction.void.toString()}
-                      </Typography>
-                    </TableCell>
-                  </React.Fragment>
-                )}
-                <TableCell align="right">
-                  {DateTime.fromISO(row.createdAt)
-                    .toLocal()
-                    .toLocaleString(DateTime.DATETIME_SHORT)}
-                </TableCell>
-                <TableCell align="right">
-                  {DateTime.fromISO(row.updatedAt)
-                    .toLocal()
-                    .toLocaleString(DateTime.DATETIME_SHORT)}
-                </TableCell>
-              </TableRow>
-            ))}
+            {rows}
             {loading ||
               (cursor && (
                 <TableRow
@@ -385,7 +465,7 @@ export default function Index() {
                   sx={{ cursor: "pointer" }}
                 >
                   <TableCell
-                    colSpan={9}
+                    colSpan={10}
                     align="center"
                     sx={{ background: "rgba(0, 0, 0, 0.06)" }}
                   >
@@ -395,7 +475,7 @@ export default function Index() {
               ))}
             {loading && (
               <TableRow>
-                <TableCell colSpan={9} padding="none">
+                <TableCell colSpan={10} padding="none">
                   <LinearProgress />
                 </TableCell>
               </TableRow>

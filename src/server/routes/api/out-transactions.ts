@@ -1,7 +1,13 @@
 import { NextFunction, Request, Response, Router } from "express";
 import * as _ from "lodash";
 import { DateTime } from "luxon";
-import { EmptyResultError, Op, QueryTypes, ValidationError } from "sequelize";
+import {
+  EmptyResultError,
+  Op,
+  Order,
+  QueryTypes,
+  ValidationError,
+} from "sequelize";
 import { AppValidationError, AppValidationErrorItem } from "../../errors";
 import {
   adminRequiredMiddleware,
@@ -189,6 +195,7 @@ router.get(
   async function (req: Request, res: Response, next: NextFunction) {
     try {
       let whereAnd: any[] = [];
+      let order: Order = [["updatedAt", "DESC"]];
 
       const dateQuery = req.query.date as string;
       if (dateQuery !== undefined) {
@@ -211,17 +218,23 @@ router.get(
       const searchQuery = req.query.search as string;
       if (searchQuery !== undefined && searchQuery !== "") {
         whereAnd.push({
-          customer: {
-            [Op.like]: `%${searchQuery}%`, // TODO
+          [Op.or]: {
+            customer: {
+              [Op.like]: `%${searchQuery}%`, // TODO
+            },
+            deliveryReceipt: {
+              [Op.like]: `%${searchQuery}%`, // TODO
+            },
           },
         });
       }
 
-      const count = await OutTransaction.count({
-        where: {
-          [Op.and]: whereAnd,
-        },
-      });
+      const orderQuery = Boolean(req.query.order)
+        ? JSON.parse(req.query.order as string)
+        : null;
+      if (orderQuery) {
+        order = [[orderQuery.by, orderQuery.direction]];
+      }
 
       const cursorQuery = req.query.cursor as string;
       if (cursorQuery !== undefined) {
@@ -279,15 +292,12 @@ router.get(
         where: {
           [Op.and]: whereAnd,
         },
-        order: [
-          ["createdAt", "DESC"],
-          ["id", "DESC"],
-        ],
-        limit: 100,
+        order: order,
+        // limit: 100,
       });
 
       res.status(200).json({
-        count: count,
+        count: results.length,
         results: results,
       });
     } catch (error: any) {

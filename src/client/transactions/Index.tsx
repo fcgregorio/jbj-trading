@@ -13,6 +13,7 @@ import {
   TableContainer,
   TableHead,
   TableRow,
+  TableSortLabel,
   TextField,
   Tooltip,
   Typography,
@@ -41,6 +42,10 @@ export default function Index() {
   const [search, setSearch] = React.useState<string>("");
   const [date, setDate] = React.useState<DateTime>(DateTime.now());
   const [cursor, setCursor] = React.useState<string | null>(null);
+  const [order, setOrder] = React.useState<{
+    by: string;
+    direction: "asc" | "desc";
+  }>({ by: "updatedAt", direction: "desc" });
 
   const [loading, setLoading] = React.useState(false);
   const cancelTokenSourceRef = React.useRef<CancelTokenSource | null>(null);
@@ -78,8 +83,12 @@ export default function Index() {
       debounce(
         async (
           request: {
-            input: string;
+            search: string;
             date: string | null;
+            order: {
+              by: string;
+              direction: string;
+            };
           },
           startCallback: () => void,
           callback: (results: any) => void,
@@ -92,10 +101,7 @@ export default function Index() {
             .get<{ count: number; results: Transaction[] }>(
               `/api${location.pathname}`,
               {
-                params: {
-                  search: request.input,
-                  date: request.date,
-                },
+                params: request,
                 cancelToken: cancelToken,
               }
             )
@@ -132,8 +138,9 @@ export default function Index() {
     const cancelTokenSource = axios.CancelToken.source();
     queryTransactions(
       {
-        input: search,
+        search: search,
         date: date !== null && date.isValid ? date.toISO() : null,
+        order: order,
       },
       () => {
         setCount(null);
@@ -163,7 +170,7 @@ export default function Index() {
     return () => {
       cancelTokenSource.cancel();
     };
-  }, [queryTransactions, search, date]);
+  }, [queryTransactions, search, date, order]);
 
   async function handleLoadMoreClick() {
     setLoading(true);
@@ -202,6 +209,138 @@ export default function Index() {
         setLoading(false);
       });
   }
+
+  function handleChangeSort(defaultOrder: {
+    by: string;
+    direction: "asc" | "desc";
+  }) {
+    if (order.by === defaultOrder.by) {
+      setOrder({
+        ...order,
+        direction: order.direction === "asc" ? "desc" : "asc",
+      });
+    } else {
+      setOrder(defaultOrder);
+    }
+  }
+
+  const rows = React.useMemo(() => {
+    return transactions.map((row: any) => (
+      <TableRow
+        key={row.id}
+        sx={{
+          "&:last-child td, &:last-child th": { border: 0 },
+        }}
+      >
+        {row.InTransaction && (
+          <React.Fragment>
+            <TableCell>
+              <Typography fontFamily="monospace" variant="body2">
+                In
+              </Typography>
+            </TableCell>
+            <TableCell>
+              <Tooltip title={row.id} placement="right">
+                <Link
+                  underline="none"
+                  component={RouterLink}
+                  to={`/in-transactions/${row.inTransaction}`}
+                  color={"text.primary"}
+                >
+                  <Typography fontFamily="monospace" variant="body2">
+                    {row.inTransaction.substring(0, 8)}
+                  </Typography>
+                </Link>
+              </Tooltip>
+            </TableCell>
+            <TableCell>{row.InTransaction.supplier}</TableCell>
+            <TableCell
+              sx={{
+                background: "rgba(0, 0, 0, 0.12)",
+              }}
+            ></TableCell>
+            <TableCell>{row.InTransaction.deliveryReceipt}</TableCell>
+            <TableCell align="right">
+              {row.InTransaction.dateOfDeliveryReceipt !== null
+                ? DateTime.fromISO(row.InTransaction.dateOfDeliveryReceipt)
+                    .toLocal()
+                    .toLocaleString(DateTime.DATE_SHORT)
+                : ""}
+            </TableCell>
+            <TableCell align="right">
+              {row.InTransaction.dateReceived !== null
+                ? DateTime.fromISO(row.InTransaction.dateReceived)
+                    .toLocal()
+                    .toLocaleString(DateTime.DATE_SHORT)
+                : ""}
+            </TableCell>
+            <TableCell align="right">
+              <Typography fontFamily="monospace" variant="body2">
+                {row.InTransaction.void.toString()}
+              </Typography>
+            </TableCell>
+          </React.Fragment>
+        )}
+        {row.OutTransaction && (
+          <React.Fragment>
+            <TableCell>
+              <Typography fontFamily="monospace" variant="body2">
+                Out
+              </Typography>
+            </TableCell>
+            <TableCell>
+              <Tooltip title={row.id} placement="right">
+                <Link
+                  underline="none"
+                  component={RouterLink}
+                  to={`/out-transactions/${row.outTransaction}`}
+                  color={"text.primary"}
+                >
+                  <Typography fontFamily="monospace" variant="body2">
+                    {row.outTransaction.substring(0, 8)}
+                  </Typography>
+                </Link>
+              </Tooltip>
+            </TableCell>
+            <TableCell
+              sx={{
+                background: "rgba(0, 0, 0, 0.12)",
+              }}
+            ></TableCell>
+            <TableCell>{row.OutTransaction.customer}</TableCell>
+            <TableCell>{row.OutTransaction.deliveryReceipt}</TableCell>
+            <TableCell align="right">
+              {row.OutTransaction.dateOfDeliveryReceipt !== null
+                ? DateTime.fromISO(row.OutTransaction.dateOfDeliveryReceipt)
+                    .toLocal()
+                    .toLocaleString(DateTime.DATE_SHORT)
+                : ""}
+            </TableCell>
+            <TableCell
+              sx={{
+                background: "rgba(0, 0, 0, 0.12)",
+              }}
+            ></TableCell>
+            <TableCell align="right">
+              <Typography fontFamily="monospace" variant="body2">
+                {row.OutTransaction.void.toString()}
+              </Typography>
+            </TableCell>
+          </React.Fragment>
+        )}
+        <TableCell align="right">
+          {DateTime.fromISO(row.createdAt)
+            .toLocal()
+            .toLocaleString(DateTime.DATETIME_SHORT)}
+        </TableCell>
+        <TableCell align="right">
+          {DateTime.fromISO(row.updatedAt)
+            .toLocal()
+            .toLocaleString(DateTime.DATETIME_SHORT)}
+        </TableCell>
+      </TableRow>
+    ));
+  }, [transactions]);
 
   return (
     <Stack
@@ -278,14 +417,112 @@ export default function Index() {
             <TableRow>
               <TableCell>Type</TableCell>
               <TableCell>Transaction ID</TableCell>
-              <TableCell>Supplier</TableCell>
-              <TableCell>Customer</TableCell>
-              <TableCell>Delivery Receipt</TableCell>
-              <TableCell align="right">Date of Delivery Receipt</TableCell>
-              <TableCell align="right">Date Received</TableCell>
-              <TableCell align="right">Void</TableCell>
-              <TableCell align="right">Created At</TableCell>
-              <TableCell align="right">Updated At</TableCell>
+              <TableCell>
+                <TableSortLabel
+                  active={order.by === "supplier"}
+                  direction={order.by === "supplier" ? order.direction : "asc"}
+                  onClick={() => {
+                    handleChangeSort({ by: "supplier", direction: "asc" });
+                  }}
+                >
+                  Supplier
+                </TableSortLabel>
+              </TableCell>
+              <TableCell>
+                <TableSortLabel
+                  active={order.by === "customer"}
+                  direction={order.by === "customer" ? order.direction : "asc"}
+                  onClick={() => {
+                    handleChangeSort({ by: "customer", direction: "asc" });
+                  }}
+                >
+                  Customer
+                </TableSortLabel>
+              </TableCell>
+              <TableCell>
+                <TableSortLabel
+                  active={order.by === "deliveryReceipt"}
+                  direction={
+                    order.by === "deliveryReceipt" ? order.direction : "asc"
+                  }
+                  onClick={() => {
+                    handleChangeSort({
+                      by: "deliveryReceipt",
+                      direction: "asc",
+                    });
+                  }}
+                >
+                  Delivery Receipt
+                </TableSortLabel>
+              </TableCell>
+              <TableCell align="right">
+                <TableSortLabel
+                  active={order.by === "dateOfDeliveryReceipt"}
+                  direction={
+                    order.by === "dateOfDeliveryReceipt"
+                      ? order.direction
+                      : "desc"
+                  }
+                  onClick={() => {
+                    handleChangeSort({
+                      by: "dateOfDeliveryReceipt",
+                      direction: "desc",
+                    });
+                  }}
+                >
+                  Date of Delivery Receipt
+                </TableSortLabel>
+              </TableCell>
+              <TableCell align="right">
+                <TableSortLabel
+                  active={order.by === "dateReceived"}
+                  direction={
+                    order.by === "dateReceived" ? order.direction : "desc"
+                  }
+                  onClick={() => {
+                    handleChangeSort({ by: "dateReceived", direction: "desc" });
+                  }}
+                >
+                  Date Received
+                </TableSortLabel>
+              </TableCell>
+              <TableCell align="right">
+                <TableSortLabel
+                  active={order.by === "void"}
+                  direction={order.by === "void" ? order.direction : "asc"}
+                  onClick={() => {
+                    handleChangeSort({ by: "void", direction: "asc" });
+                  }}
+                >
+                  Void
+                </TableSortLabel>
+              </TableCell>
+              <TableCell align="right">
+                <TableSortLabel
+                  active={order.by === "createdAt"}
+                  direction={
+                    order.by === "createdAt" ? order.direction : "desc"
+                  }
+                  onClick={() => {
+                    handleChangeSort({ by: "createdAt", direction: "desc" });
+                  }}
+                >
+                  Created At
+                </TableSortLabel>
+              </TableCell>
+              <TableCell align="right">
+                <TableSortLabel
+                  active={order.by === "updatedAt"}
+                  direction={
+                    order.by === "updatedAt" ? order.direction : "desc"
+                  }
+                  onClick={() => {
+                    handleChangeSort({ by: "updatedAt", direction: "desc" });
+                  }}
+                >
+                  Updated At
+                </TableSortLabel>
+              </TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -302,125 +539,7 @@ export default function Index() {
                 </TableCell>
               </TableRow>
             )}
-            {transactions.map((row: any) => (
-              <TableRow
-                key={row.id}
-                sx={{
-                  "&:last-child td, &:last-child th": { border: 0 },
-                }}
-              >
-                {row.InTransaction && (
-                  <React.Fragment>
-                    <TableCell>
-                      <Typography fontFamily="monospace" variant="body2">
-                        In
-                      </Typography>
-                    </TableCell>
-                    <TableCell>
-                      <Tooltip title={row.id} placement="right">
-                        <Link
-                          underline="none"
-                          component={RouterLink}
-                          to={`/in-transactions/${row.inTransaction}`}
-                          color={"text.primary"}
-                        >
-                          <Typography fontFamily="monospace" variant="body2">
-                            {row.inTransaction.substring(0, 8)}
-                          </Typography>
-                        </Link>
-                      </Tooltip>
-                    </TableCell>
-                    <TableCell>{row.InTransaction.supplier}</TableCell>
-                    <TableCell
-                      sx={{
-                        background: "rgba(0, 0, 0, 0.12)",
-                      }}
-                    ></TableCell>
-                    <TableCell>{row.InTransaction.deliveryReceipt}</TableCell>
-                    <TableCell align="right">
-                      {row.InTransaction.dateOfDeliveryReceipt !== null
-                        ? DateTime.fromISO(
-                            row.InTransaction.dateOfDeliveryReceipt
-                          )
-                            .toLocal()
-                            .toLocaleString(DateTime.DATE_SHORT)
-                        : ""}
-                    </TableCell>
-                    <TableCell align="right">
-                      {row.InTransaction.dateReceived !== null
-                        ? DateTime.fromISO(row.InTransaction.dateReceived)
-                            .toLocal()
-                            .toLocaleString(DateTime.DATE_SHORT)
-                        : ""}
-                    </TableCell>
-                    <TableCell align="right">
-                      <Typography fontFamily="monospace" variant="body2">
-                        {row.InTransaction.void.toString()}
-                      </Typography>
-                    </TableCell>
-                  </React.Fragment>
-                )}
-                {row.OutTransaction && (
-                  <React.Fragment>
-                    <TableCell>
-                      <Typography fontFamily="monospace" variant="body2">
-                        Out
-                      </Typography>
-                    </TableCell>
-                    <TableCell>
-                      <Tooltip title={row.id} placement="right">
-                        <Link
-                          underline="none"
-                          component={RouterLink}
-                          to={`/out-transactions/${row.outTransaction}`}
-                          color={"text.primary"}
-                        >
-                          <Typography fontFamily="monospace" variant="body2">
-                            {row.outTransaction.substring(0, 8)}
-                          </Typography>
-                        </Link>
-                      </Tooltip>
-                    </TableCell>
-                    <TableCell
-                      sx={{
-                        background: "rgba(0, 0, 0, 0.12)",
-                      }}
-                    ></TableCell>
-                    <TableCell>{row.OutTransaction.customer}</TableCell>
-                    <TableCell>{row.OutTransaction.deliveryReceipt}</TableCell>
-                    <TableCell align="right">
-                      {row.OutTransaction.dateOfDeliveryReceipt !== null
-                        ? DateTime.fromISO(
-                            row.OutTransaction.dateOfDeliveryReceipt
-                          )
-                            .toLocal()
-                            .toLocaleString(DateTime.DATE_SHORT)
-                        : ""}
-                    </TableCell>
-                    <TableCell
-                      sx={{
-                        background: "rgba(0, 0, 0, 0.12)",
-                      }}
-                    ></TableCell>
-                    <TableCell align="right">
-                      <Typography fontFamily="monospace" variant="body2">
-                        {row.OutTransaction.void.toString()}
-                      </Typography>
-                    </TableCell>
-                  </React.Fragment>
-                )}
-                <TableCell align="right">
-                  {DateTime.fromISO(row.createdAt)
-                    .toLocal()
-                    .toLocaleString(DateTime.DATETIME_SHORT)}
-                </TableCell>
-                <TableCell align="right">
-                  {DateTime.fromISO(row.updatedAt)
-                    .toLocal()
-                    .toLocaleString(DateTime.DATETIME_SHORT)}
-                </TableCell>
-              </TableRow>
-            ))}
+            {rows}
             {loading ||
               (cursor && (
                 <TableRow

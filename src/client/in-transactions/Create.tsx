@@ -356,7 +356,7 @@ export default function Create() {
                       <TableCell>Item Name</TableCell>
                       <TableCell align="right">Quantity*</TableCell>
                       <TableCell>Item Unit</TableCell>
-                      <TableCell></TableCell>
+                      <TableCell />
                     </TableRow>
                   </TableHead>
                   <TableBody>

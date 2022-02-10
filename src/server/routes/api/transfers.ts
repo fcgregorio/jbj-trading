@@ -1,8 +1,9 @@
 import { NextFunction, Request, Response, Router } from "express";
 import { DateTime } from "luxon";
-import { literal, Op, QueryTypes } from "sequelize";
+import { literal, Op, Order, QueryTypes } from "sequelize";
 import { loginRequiredMiddleware } from "../../middleware/auth";
 import sequelize, {
+  Category,
   InTransaction,
   InTransfer,
   Item,
@@ -20,17 +21,7 @@ router.get(
   async function (req: Request, res: Response, next: NextFunction) {
     try {
       let whereAnd: any[] = [];
-      whereAnd.push({
-        [Op.or]: [
-          literal("`InTransfer.id` IS NOT NULL"),
-          literal("`OutTransfer.id` IS NOT NULL"),
-        ],
-      });
-
-      let countQueryWhere = ``;
-      let countQueryInTransferJoin = ``;
-      let countQueryOutTransferJoin = ``;
-      let countQueryReplacements = {};
+      let order: Order = [["updatedAt", "DESC"]];
 
       const dateQuery = req.query.date as string;
       if (dateQuery !== undefined) {
@@ -41,25 +32,6 @@ router.get(
           res.status(400).send("Invalid date");
           return;
         } else {
-          countQueryWhere =
-            countQueryWhere +
-            `(
-                        'Transfer'.'createdAt' >= :startDate
-                        AND
-                        'Transfer'.'createdAt' <= :endDate
-                    )`;
-          countQueryReplacements = {
-            ...countQueryReplacements,
-            startDate: date
-              .startOf("day")
-              .setZone("utc")
-              .toFormat("yyyy-LL-dd HH:mm:ss ZZ"),
-            endDate: date
-              .endOf("day")
-              .setZone("utc")
-              .toFormat("yyyy-LL-dd HH:mm:ss ZZ"),
-          };
-
           whereAnd.push({
             createdAt: {
               [Op.gte]: date.startOf("day").toJSDate(),
@@ -69,60 +41,69 @@ router.get(
         }
       }
 
-      let whereInTransferAnd: any[] = [];
-      let whereOutTransferAnd: any[] = [];
       const searchQuery = req.query.search as string;
       if (searchQuery !== undefined && searchQuery !== "") {
-        countQueryInTransferJoin =
-          countQueryInTransferJoin +
-          `
-                    AND 'InTransfer->Item'.'name' LIKE :searchQuery
-                `;
-        countQueryOutTransferJoin =
-          countQueryOutTransferJoin +
-          `
-                    AND 'OutTransfer->Item'.'name' LIKE :searchQuery
-                `;
-        countQueryReplacements = {
-          ...countQueryReplacements,
-          searchQuery: `%${searchQuery}%`,
-        };
-
-        whereInTransferAnd.push({
-          name: {
-            [Op.like]: `%${searchQuery}%`, // TODO
-          },
-        });
-        whereOutTransferAnd.push({
-          name: {
-            [Op.like]: `%${searchQuery}%`, // TODO
+        whereAnd.push({
+          [Op.or]: {
+            "$InTransfer.Item.name$": {
+              [Op.like]: `%${searchQuery}%`, // TODO
+            },
+            "$InTransfer.Item.Unit.name$": {
+              [Op.like]: `%${searchQuery}%`, // TODO
+            },
+            "$InTransfer.Item.Category.name$": {
+              [Op.like]: `%${searchQuery}%`, // TODO
+            },
+            "$OutTransfer.Item.name$": {
+              [Op.like]: `%${searchQuery}%`, // TODO
+            },
+            "$OutTransfer.Item.Unit.name$": {
+              [Op.like]: `%${searchQuery}%`, // TODO
+            },
+            "$OutTransfer.Item.Category.name$": {
+              [Op.like]: `%${searchQuery}%`, // TODO
+            },
           },
         });
       }
 
-      const count = await sequelize.query(
-        `SELECT
-                (count('InTransfer'.'id') + count('OutTransfer'.'id')) AS 'count'
-            FROM
-                'transfers' AS 'Transfer'
-            LEFT OUTER JOIN 'in_transfers' AS 'InTransfer'
-                ON 'Transfer'.'inTransfer' = 'InTransfer'.'id'
-            LEFT OUTER JOIN 'items' AS 'InTransfer->Item'
-                ON 'InTransfer'.'item' = 'InTransfer->Item'.'id'
-                ${countQueryInTransferJoin}
-            LEFT OUTER JOIN 'out_transfers' AS 'OutTransfer'
-                ON 'Transfer'.'outTransfer' = 'OutTransfer'.'id'
-            LEFT OUTER JOIN 'items' AS 'OutTransfer->Item'
-                ON 'OutTransfer'.'item' = 'OutTransfer->Item'.'id'
-                ${countQueryOutTransferJoin}
-            WHERE ${countQueryWhere}
-            ;`,
-        {
-          type: QueryTypes.SELECT,
-          replacements: countQueryReplacements,
-          raw: true,
+      const orderQuery = Boolean(req.query.order)
+        ? JSON.parse(req.query.order as string)
+        : null;
+      if (orderQuery) {
+        switch (orderQuery.by) {
+          case "item":
+            order = [
+              literal(
+                `IFNULL(\`InTransfer.Item.name\`, \`OutTransfer.Item.name\`) ${orderQuery.direction}`
+              ),
+            ];
+            break;
+          case "unit":
+            order = [
+              literal(
+                `IFNULL(\`InTransfer.Item.Unit.name\`, \`OutTransfer.Item.Unit.name\`) ${orderQuery.direction}`
+              ),
+            ];
+            break;
+          case "category":
+            order = [
+              literal(
+                `IFNULL(\`InTransfer.Item.Category.name\`, \`OutTransfer.Item.Category.name\`) ${orderQuery.direction}`
+              ),
+            ];
+            break;
+          case "void":
+            order = [
+              literal(
+                `IFNULL(\`InTransfer.InTransaction.void\`, \`OutTransfer.OutTransaction.void\`) ${orderQuery.direction}`
+              ),
+            ];
+            break;
+          default:
+            order = [[orderQuery.by, orderQuery.direction]];
         }
-      );
+      }
 
       const cursorQuery = req.query.cursor as string;
       if (cursorQuery !== undefined) {
@@ -173,10 +154,12 @@ router.get(
                     attributes: ["name"],
                     paranoid: false,
                   },
+                  {
+                    model: Category,
+                    attributes: ["name"],
+                    paranoid: false,
+                  },
                 ],
-                where: {
-                  [Op.and]: whereInTransferAnd,
-                },
               },
             ],
             required: false,
@@ -198,10 +181,12 @@ router.get(
                     attributes: ["name"],
                     paranoid: false,
                   },
+                  {
+                    model: Category,
+                    attributes: ["name"],
+                    paranoid: false,
+                  },
                 ],
-                where: {
-                  [Op.and]: whereOutTransferAnd,
-                },
               },
             ],
             required: false,
@@ -210,15 +195,12 @@ router.get(
         where: {
           [Op.and]: whereAnd,
         },
-        order: [
-          ["createdAt", "DESC"],
-          ["id", "DESC"],
-        ],
-        limit: 100,
+        order: order,
+        // limit: 100,
       });
 
       res.status(200).json({
-        count: (count[0] as any).count,
+        count: results.length,
         results: results,
       });
     } catch (error: any) {
