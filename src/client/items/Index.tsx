@@ -233,24 +233,40 @@ export default function Index() {
         <TableCell>{row.Unit.name}</TableCell>
         <TableCell>{row.Category.name}</TableCell>
         <TableCell>{row.remarks}</TableCell>
-        <TableCell align="right">
-          {DateTime.fromISO(row.createdAt)
-            .toLocal()
-            .toLocaleString(DateTime.DATETIME_SHORT)}
-        </TableCell>
-        <TableCell align="right">
-          {DateTime.fromISO(row.updatedAt)
-            .toLocal()
-            .toLocaleString(DateTime.DATETIME_SHORT)}
-        </TableCell>
+        <TableCell
+          align="right"
+          dangerouslySetInnerHTML={{
+            __html: DateTime.fromISO(row.createdAt)
+              .toLocal()
+              .toFormat(
+                "ccc, LLL'&nbsp;'dd,'&nbsp;'yyyy, hh:mm:ss.SSS'&nbsp;'a"
+              ),
+          }}
+        />
+        <TableCell
+          align="right"
+          dangerouslySetInnerHTML={{
+            __html: DateTime.fromISO(row.updatedAt)
+              .toLocal()
+              .toFormat(
+                "ccc, LLL'&nbsp;'dd,'&nbsp;'yyyy, hh:mm:ss.SSS'&nbsp;'a"
+              ),
+          }}
+        />
         {filterMenuShowDeleted && (
-          <TableCell align="right">
-            {row.deletedAt !== null
-              ? DateTime.fromISO(row.deletedAt)
-                  .toLocal()
-                  .toLocaleString(DateTime.DATETIME_SHORT)
-              : null}
-          </TableCell>
+          <TableCell
+            align="right"
+            dangerouslySetInnerHTML={{
+              __html:
+                row.deletedAt !== null
+                  ? DateTime.fromISO(row.deletedAt)
+                      .toLocal()
+                      .toFormat(
+                        "ccc, LLL'&nbsp;'dd,'&nbsp;'yyyy, hh:mm:ss.SSS'&nbsp;'a"
+                      )
+                  : "",
+            }}
+          />
         )}
       </TableRow>
     ));

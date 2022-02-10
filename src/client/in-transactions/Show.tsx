@@ -206,16 +206,26 @@ function History() {
                   {row.void.toString()}
                 </Typography>
               </TableCell>
-              <TableCell align="right">
-                {DateTime.fromISO(row.createdAt)
-                  .toLocal()
-                  .toLocaleString(DateTime.DATETIME_SHORT)}
-              </TableCell>
-              <TableCell align="right">
-                {DateTime.fromISO(row.updatedAt)
-                  .toLocal()
-                  .toLocaleString(DateTime.DATETIME_SHORT)}
-              </TableCell>
+              <TableCell
+                align="right"
+                dangerouslySetInnerHTML={{
+                  __html: DateTime.fromISO(row.createdAt)
+                    .toLocal()
+                    .toFormat(
+                      "ccc, LLL'&nbsp;'dd,'&nbsp;'yyyy, hh:mm:ss.SSS'&nbsp;'a"
+                    ),
+                }}
+              />
+              <TableCell
+                align="right"
+                dangerouslySetInnerHTML={{
+                  __html: DateTime.fromISO(row.updatedAt)
+                    .toLocal()
+                    .toFormat(
+                      "ccc, LLL'&nbsp;'dd,'&nbsp;'yyyy, hh:mm:ss.SSS'&nbsp;'a"
+                    ),
+                }}
+              />
             </TableRow>
           ))}
           {loading ||
