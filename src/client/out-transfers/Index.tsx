@@ -23,9 +23,13 @@ import { DateTime } from "luxon";
 import { useSnackbar } from "notistack";
 import * as React from "react";
 import { Link as RouterLink, useLocation, useNavigate } from "react-router-dom";
+import { DateTimeContext } from "../Context";
 import { OutTransfer } from "./OutTransfers";
 
 export default function Index() {
+  const [dateTimeContext, setDateTimeContext] =
+    React.useContext(DateTimeContext);
+
   const navigate = useNavigate();
   const location = useLocation();
   const { enqueueSnackbar, closeSnackbar } = useSnackbar();
@@ -35,7 +39,7 @@ export default function Index() {
   }, []);
 
   const [search, setSearch] = React.useState<string>("");
-  const [date, setDate] = React.useState<DateTime>(DateTime.now());
+  const [format, setFormat] = React.useState<string>("MM/dd/yyyy ccc");
   const [cursor, setCursor] = React.useState<string | null>(null);
   const [order, setOrder] = React.useState<{
     by: string;
@@ -98,7 +102,7 @@ export default function Index() {
       cancelTokenSourceRef.current = null;
     }
 
-    if (!date.isValid) {
+    if (!dateTimeContext.isValid) {
       setCount(null);
       setOutTransfers([]);
       setLoading(false);
@@ -109,7 +113,7 @@ export default function Index() {
     queryOutTransfers(
       {
         search: search,
-        date: date !== null && date.isValid ? date.toISO() : null,
+        date: dateTimeContext.isValid ? dateTimeContext.toISO() : null,
         order: order,
       },
       () => {
@@ -140,7 +144,7 @@ export default function Index() {
     return () => {
       cancelTokenSource.cancel();
     };
-  }, [queryOutTransfers, search, date, order]);
+  }, [queryOutTransfers, search, dateTimeContext, order]);
 
   async function handleLoadMoreClick() {
     setLoading(true);
@@ -152,7 +156,7 @@ export default function Index() {
         {
           params: {
             search: search,
-            date: date !== null && date.isValid ? date.toISO() : null,
+            date: dateTimeContext.isValid ? dateTimeContext.toISO() : null,
             cursor: cursor,
           },
           cancelToken: source.token,
@@ -290,18 +294,24 @@ export default function Index() {
           />
           <DesktopDatePicker
             label="Date"
-            value={date}
-            inputFormat="MM/dd/yyyy"
+            value={dateTimeContext}
+            inputFormat={format}
             minDate={DateTime.local(2000, 1, 1)}
             maxDate={DateTime.now()}
             onChange={(newValue) => {
               if (newValue === null) {
                 newValue = DateTime.invalid("Cannot be null");
               }
-              setDate(newValue);
+              setDateTimeContext(newValue);
             }}
             renderInput={(params) => (
-              <TextField size="small" sx={{ width: 250 }} {...params} />
+              <TextField
+                size="small"
+                sx={{ width: 250 }}
+                {...params}
+                onFocus={() => setFormat("MM/dd/yyyy")}
+                onBlur={() => setFormat("MM/dd/yyyy ccc")}
+              />
             )}
           />
         </Stack>
