@@ -429,6 +429,7 @@ export default function Show() {
                   <FormControlLabel
                     label="Admin"
                     sx={{
+                      display: "inline-block",
                       userSelect: "none",
                     }}
                     control={

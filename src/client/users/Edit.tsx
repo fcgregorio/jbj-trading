@@ -237,6 +237,7 @@ export default function Edit() {
                 <FormControlLabel
                   label="Admin"
                   sx={{
+                    display: "inline-block",
                     userSelect: "none",
                   }}
                   control={

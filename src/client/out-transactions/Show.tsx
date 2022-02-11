@@ -382,6 +382,7 @@ export default function Show() {
                   <FormControlLabel
                     label="Void"
                     sx={{
+                      display: "inline-block",
                       userSelect: "none",
                     }}
                     control={

@@ -198,6 +198,7 @@ export default function Create() {
           <FormControlLabel
             label="Admin"
             sx={{
+              display: "inline-block",
               userSelect: "none",
             }}
             control={
