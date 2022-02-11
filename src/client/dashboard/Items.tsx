@@ -16,7 +16,6 @@ import {
   Typography,
 } from "@mui/material";
 import axios, { CancelToken, CancelTokenSource } from "axios";
-import { request } from "https";
 import { debounce } from "lodash";
 import { useSnackbar } from "notistack";
 import * as React from "react";
