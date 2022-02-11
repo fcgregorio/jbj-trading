@@ -316,6 +316,7 @@ export function InTransferStrip(props: InTransferStripProps) {
               setItemOptions([]);
               setQuantity(1);
               setInTransferIDs([]);
+              itemInputElRef.current?.focus();
             }}
             onBlur={handleBlur}
           >

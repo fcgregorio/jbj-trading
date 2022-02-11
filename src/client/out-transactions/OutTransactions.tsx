@@ -310,6 +310,7 @@ export function OutTransferStrip(props: OutTransferStripProps) {
               setItemOptions([]);
               setQuantity(1);
               setOutTransferIDs([]);
+              itemInputElRef.current?.focus();
             }}
             onBlur={handleBlur}
           >

@@ -50,7 +50,6 @@ export default function (props) {
                 <TableCell align="right">
                   <TextField
                     id={`InTransfers[${index}].quantity`}
-                    autoFocus
                     sx={{
                       minWidth: 100,
                     }}
