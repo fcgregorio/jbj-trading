@@ -49,7 +49,7 @@ export default function Create() {
         .min(10, "Must be at least 10 characters long")
         .matches(
           /^[A-Za-z0-9]+$/,
-          "Can only contain lowercase letters, uppercase letters, and characters"
+          "Can only contain lowercase letters, uppercase letters, and digits"
         )
         .required("Required"),
       passwordVerification: Yup.string().test(

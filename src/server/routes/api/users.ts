@@ -29,7 +29,7 @@ router.post(
           if (req.body.password.match("^[A-Za-z0-9]+$")) {
             throw new AppValidationError([
               new AppValidationErrorItem(
-                "Can only contain lowercase letters, uppercase letters, and characters",
+                "Can only contain lowercase letters, uppercase letters, and digits",
                 "password"
               ),
             ]);
@@ -279,7 +279,7 @@ router.put(
           if (req.body.password.match("^[A-Za-z0-9]+$")) {
             throw new AppValidationError([
               new AppValidationErrorItem(
-                "Can only contain lowercase letters, uppercase letters, and characters",
+                "Can only contain lowercase letters, uppercase letters, and digits",
                 "password"
               ),
             ]);
