@@ -378,11 +378,14 @@ export default function Show() {
                     <TextField {...params} fullWidth variant="filled" />
                   )}
                 />
-                <FormGroup>
+                <FormGroup
+                  sx={{
+                    display: "inline-block",
+                  }}
+                >
                   <FormControlLabel
                     label="Void"
                     sx={{
-                      display: "inline-block",
                       userSelect: "none",
                     }}
                     control={

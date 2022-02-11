@@ -300,11 +300,14 @@ export default function Edit() {
                   />
                 )}
               />
-              <FormGroup>
+              <FormGroup
+                sx={{
+                  display: "inline-block",
+                }}
+              >
                 <FormControlLabel
                   label="Void"
                   sx={{
-                    display: "inline-block",
                     userSelect: "none",
                   }}
                   control={

@@ -194,11 +194,14 @@ export default function Create() {
           error={formik.touched.lastName && Boolean(formik.errors.lastName)}
           helperText={formik.touched.lastName && formik.errors.lastName}
         />
-        <FormGroup>
+        <FormGroup
+          sx={{
+            display: "inline-block",
+          }}
+        >
           <FormControlLabel
             label="Admin"
             sx={{
-              display: "inline-block",
               userSelect: "none",
             }}
             control={

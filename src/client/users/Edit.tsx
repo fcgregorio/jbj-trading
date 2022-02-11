@@ -233,11 +233,14 @@ export default function Edit() {
                 }
                 helperText={formik.touched.lastName && formik.errors.lastName}
               />
-              <FormGroup>
+              <FormGroup
+                sx={{
+                  display: "inline-block",
+                }}
+              >
                 <FormControlLabel
                   label="Admin"
                   sx={{
-                    display: "inline-block",
                     userSelect: "none",
                   }}
                   control={
