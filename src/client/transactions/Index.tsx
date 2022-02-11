@@ -264,20 +264,28 @@ export default function Index() {
               }}
             ></TableCell>
             <TableCell>{row.InTransaction.deliveryReceipt}</TableCell>
-            <TableCell align="right">
-              {row.InTransaction.dateOfDeliveryReceipt !== null
-                ? DateTime.fromISO(row.InTransaction.dateOfDeliveryReceipt)
-                    .toLocal()
-                    .toLocaleString(DateTime.DATE_SHORT)
-                : ""}
-            </TableCell>
-            <TableCell align="right">
-              {row.InTransaction.dateReceived !== null
-                ? DateTime.fromISO(row.InTransaction.dateReceived)
-                    .toLocal()
-                    .toLocaleString(DateTime.DATE_SHORT)
-                : ""}
-            </TableCell>
+            <TableCell
+              align="right"
+              dangerouslySetInnerHTML={{
+                __html:
+                  row.InTransaction.dateOfDeliveryReceipt !== null
+                    ? DateTime.fromISO(row.InTransaction.dateOfDeliveryReceipt)
+                        .toLocal()
+                        .toFormat("ccc, LLL'&nbsp;'dd,'&nbsp;'yyyy")
+                    : "",
+              }}
+            />
+            <TableCell
+              align="right"
+              dangerouslySetInnerHTML={{
+                __html:
+                  row.InTransaction.dateReceived !== null
+                    ? DateTime.fromISO(row.InTransaction.dateReceived)
+                        .toLocal()
+                        .toFormat("ccc, LLL'&nbsp;'dd,'&nbsp;'yyyy")
+                    : "",
+              }}
+            />
             <TableCell align="right">
               <Typography fontFamily="monospace" variant="body2">
                 {row.InTransaction.void.toString()}
@@ -313,13 +321,17 @@ export default function Index() {
             ></TableCell>
             <TableCell>{row.OutTransaction.customer}</TableCell>
             <TableCell>{row.OutTransaction.deliveryReceipt}</TableCell>
-            <TableCell align="right">
-              {row.OutTransaction.dateOfDeliveryReceipt !== null
-                ? DateTime.fromISO(row.OutTransaction.dateOfDeliveryReceipt)
-                    .toLocal()
-                    .toLocaleString(DateTime.DATE_SHORT)
-                : ""}
-            </TableCell>
+            <TableCell
+              align="right"
+              dangerouslySetInnerHTML={{
+                __html:
+                  row.OutTransaction.dateOfDeliveryReceipt !== null
+                    ? DateTime.fromISO(row.OutTransaction.dateOfDeliveryReceipt)
+                        .toLocal()
+                        .toFormat("ccc, LLL'&nbsp;'dd,'&nbsp;'yyyy")
+                    : "",
+              }}
+            />
             <TableCell
               sx={{
                 background: "rgba(0, 0, 0, 0.12)",
