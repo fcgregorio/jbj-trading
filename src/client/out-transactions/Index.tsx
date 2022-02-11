@@ -310,7 +310,7 @@ export default function Index() {
                 size="small"
                 sx={{ width: 250 }}
                 {...params}
-                onFocus={() => setFormat("LL/dd/yyyy")}
+                onFocusCapture={() => setFormat("LL/dd/yyyy")}
                 onBlur={() => setFormat("ccc, LLL dd, yyyy")}
               />
             )}
