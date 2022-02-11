@@ -59,8 +59,10 @@ export default function Edit() {
   const [loading, setLoading] = React.useState(false);
   const [locked, setLocked] = React.useState(false);
 
+  const dateOfDeliveryReceiptInputRef = React.useRef<HTMLInputElement>(null);
   const [dateOfDeliveryReceiptFormat, setDateOfDeliveryReceiptFormat] =
     React.useState<string>("ccc, LLL dd, yyyy");
+  const dateReceivedInputRef = React.useRef<HTMLInputElement>(null);
   const [dateReceivedFormat, setDateReceivedFormat] =
     React.useState<string>("ccc, LLL dd, yyyy");
 
@@ -271,12 +273,19 @@ export default function Edit() {
                 }
               />
               <DesktopDatePicker
+                inputRef={dateOfDeliveryReceiptInputRef}
                 label="Date of Delivery Receipt"
+                value={formik.values.dateOfDeliveryReceipt}
                 inputFormat={dateOfDeliveryReceiptFormat}
                 maxDate={DateTime.now()}
-                value={formik.values.dateOfDeliveryReceipt}
                 onChange={(newValue) => {
                   formik.setFieldValue("dateOfDeliveryReceipt", newValue);
+                }}
+                onOpen={() => {
+                  setDateOfDeliveryReceiptFormat("LL/dd/yyyy");
+                }}
+                onClose={() => {
+                  setDateOfDeliveryReceiptFormat("ccc, LLL dd, yyyy");
                 }}
                 renderInput={(params) => (
                   <TextField
@@ -284,9 +293,13 @@ export default function Edit() {
                     id="dateOfDeliveryReceipt"
                     fullWidth
                     variant="filled"
-                    onFocusCapture={() =>
-                      setDateOfDeliveryReceiptFormat("LL/dd/yyyy")
-                    }
+                    onFocusCapture={(event) => {
+                      if (
+                        event.target === dateOfDeliveryReceiptInputRef.current
+                      ) {
+                        setDateOfDeliveryReceiptFormat("LL/dd/yyyy");
+                      }
+                    }}
                     onBlur={(event) => {
                       setDateOfDeliveryReceiptFormat("ccc, LLL dd, yyyy");
                       formik.handleBlur(event);
@@ -303,12 +316,19 @@ export default function Edit() {
                 )}
               />
               <DesktopDatePicker
+                inputRef={dateReceivedInputRef}
                 label="Date Received"
+                value={formik.values.dateReceived}
                 inputFormat={dateReceivedFormat}
                 maxDate={DateTime.now()}
-                value={formik.values.dateReceived}
                 onChange={(newValue) => {
                   formik.setFieldValue("dateReceived", newValue);
+                }}
+                onOpen={() => {
+                  setDateReceivedFormat("LL/dd/yyyy");
+                }}
+                onClose={() => {
+                  setDateReceivedFormat("ccc, LLL dd, yyyy");
                 }}
                 renderInput={(params) => (
                   <TextField
@@ -316,7 +336,11 @@ export default function Edit() {
                     id="dateReceived"
                     fullWidth
                     variant="filled"
-                    onFocusCapture={() => setDateReceivedFormat("LL/dd/yyyy")}
+                    onFocusCapture={(event) => {
+                      if (event.target === dateReceivedInputRef.current) {
+                        setDateReceivedFormat("LL/dd/yyyy");
+                      }
+                    }}
                     onBlur={(event) => {
                       setDateReceivedFormat("ccc, LLL dd, yyyy");
                       formik.handleBlur(event);

@@ -1,5 +1,4 @@
 import { Search as SearchIcon } from "@mui/icons-material";
-import { DesktopDatePicker } from "@mui/lab";
 import {
   Box,
   InputAdornment,
@@ -24,11 +23,11 @@ import { useSnackbar } from "notistack";
 import * as React from "react";
 import { Link as RouterLink, useLocation, useNavigate } from "react-router-dom";
 import { DateTimeContext } from "../Context";
+import DatePicker from "../DatePicker";
 import { InTransfer } from "./InTransfers";
 
 export default function Index() {
-  const [dateTimeContext, setDateTimeContext] =
-    React.useContext(DateTimeContext);
+  const [dateTimeContext] = React.useContext(DateTimeContext);
 
   const navigate = useNavigate();
   const location = useLocation();
@@ -39,7 +38,6 @@ export default function Index() {
   }, []);
 
   const [search, setSearch] = React.useState<string>("");
-  const [format, setFormat] = React.useState<string>("ccc, LLL dd, yyyy");
   const [cursor, setCursor] = React.useState<string | null>(null);
   const [order, setOrder] = React.useState<{
     by: string;
@@ -302,28 +300,7 @@ export default function Index() {
               ),
             }}
           />
-          <DesktopDatePicker
-            label="Date"
-            value={dateTimeContext}
-            inputFormat={format}
-            minDate={DateTime.local(2000, 1, 1)}
-            maxDate={DateTime.now()}
-            onChange={(newValue) => {
-              if (newValue === null) {
-                newValue = DateTime.invalid("Cannot be null");
-              }
-              setDateTimeContext(newValue);
-            }}
-            renderInput={(params) => (
-              <TextField
-                size="small"
-                sx={{ width: 250 }}
-                {...params}
-                onFocusCapture={() => setFormat("LL/dd/yyyy")}
-                onBlur={() => setFormat("ccc, LLL dd, yyyy")}
-              />
-            )}
-          />
+          <DatePicker />
         </Stack>
         <Stack direction="row" spacing={2} sx={{ marginLeft: "auto" }}></Stack>
       </Box>
