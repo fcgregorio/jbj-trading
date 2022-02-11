@@ -30,12 +30,21 @@ router.post(
   "/",
   async function (req: Request, res: Response, next: NextFunction) {
     try {
+      let dateOfDeliveryReceipt = req.body.dateOfDeliveryReceipt;
+      try {
+        dateOfDeliveryReceipt = DateTime.fromISO(dateOfDeliveryReceipt, {
+          setZone: true,
+        }).toFormat("yyyy-LL-dd");
+      } catch (err) {
+        // no-op
+      }
+
       const result = await sequelize.transaction(async (t) => {
         const outTransaction = await OutTransaction.create(
           {
             customer: req.body.customer,
             deliveryReceipt: req.body.deliveryReceipt,
-            dateOfDeliveryReceipt: req.body.dateOfDeliveryReceipt,
+            dateOfDeliveryReceipt: dateOfDeliveryReceipt,
           },
           {
             include: [OutTransfer],
@@ -396,6 +405,15 @@ router.put(
   adminRequiredMiddleware,
   async function (req: Request, res: Response, next: NextFunction) {
     try {
+      let dateOfDeliveryReceipt = req.body.dateOfDeliveryReceipt;
+      try {
+        dateOfDeliveryReceipt = DateTime.fromISO(dateOfDeliveryReceipt, {
+          setZone: true,
+        }).toFormat("yyyy-LL-dd");
+      } catch (err) {
+        // no-op
+      }
+
       const result = await sequelize.transaction(async (t) => {
         const outTransaction = await OutTransaction.findByPk(req.params.id, {
           include: [OutTransfer],
@@ -417,7 +435,7 @@ router.put(
 
         outTransaction.customer = req.body.customer;
         outTransaction.deliveryReceipt = req.body.deliveryReceipt;
-        outTransaction.dateOfDeliveryReceipt = req.body.dateOfDeliveryReceipt;
+        outTransaction.dateOfDeliveryReceipt = dateOfDeliveryReceipt;
         outTransaction.void = req.body.void;
         const updatedOutTransaction = await outTransaction.save({
           transaction: t,

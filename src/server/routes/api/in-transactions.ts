@@ -30,13 +30,26 @@ router.post(
   "/",
   async function (req: Request, res: Response, next: NextFunction) {
     try {
+      let dateOfDeliveryReceipt = req.body.dateOfDeliveryReceipt;
+      let dateReceived = req.body.dateReceived;
+      try {
+        dateOfDeliveryReceipt = DateTime.fromISO(dateOfDeliveryReceipt, {
+          setZone: true,
+        }).toFormat("yyyy-LL-dd");
+        dateReceived = DateTime.fromISO(dateReceived, {
+          setZone: true,
+        }).toFormat("yyyy-LL-dd");
+      } catch (err) {
+        // no-op
+      }
+
       const result = await sequelize.transaction(async (t) => {
         const inTransaction = await InTransaction.create(
           {
             supplier: req.body.supplier,
             deliveryReceipt: req.body.deliveryReceipt,
-            dateOfDeliveryReceipt: req.body.dateOfDeliveryReceipt,
-            dateReceived: req.body.dateReceived,
+            dateOfDeliveryReceipt: dateOfDeliveryReceipt,
+            dateReceived: dateReceived,
           },
           {
             include: [InTransfer],
@@ -398,6 +411,19 @@ router.put(
   adminRequiredMiddleware,
   async function (req: Request, res: Response, next: NextFunction) {
     try {
+      let dateOfDeliveryReceipt = req.body.dateOfDeliveryReceipt;
+      let dateReceived = req.body.dateReceived;
+      try {
+        dateOfDeliveryReceipt = DateTime.fromISO(dateOfDeliveryReceipt, {
+          setZone: true,
+        }).toFormat("yyyy-LL-dd");
+        dateReceived = DateTime.fromISO(dateReceived, {
+          setZone: true,
+        }).toFormat("yyyy-LL-dd");
+      } catch (err) {
+        // no-op
+      }
+
       const result = await sequelize.transaction(async (t) => {
         const inTransaction = await InTransaction.findByPk(req.params.id, {
           include: [InTransfer],
@@ -419,8 +445,8 @@ router.put(
 
         inTransaction.supplier = req.body.supplier;
         inTransaction.deliveryReceipt = req.body.deliveryReceipt;
-        inTransaction.dateOfDeliveryReceipt = req.body.dateOfDeliveryReceipt;
-        inTransaction.dateReceived = req.body.dateReceived;
+        inTransaction.dateOfDeliveryReceipt = dateOfDeliveryReceipt;
+        inTransaction.dateReceived = dateReceived;
         inTransaction.void = req.body.void;
         const updatedInTransaction = await inTransaction.save({
           transaction: t,
