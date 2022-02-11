@@ -40,7 +40,7 @@ export default function Index() {
   }, []);
 
   const [search, setSearch] = React.useState<string>("");
-  const [format, setFormat] = React.useState<string>("MM/dd/yyyy ccc");
+  const [format, setFormat] = React.useState<string>("ccc, LLL dd, yyyy");
   const [cursor, setCursor] = React.useState<string | null>(null);
   const [order, setOrder] = React.useState<{
     by: string;
@@ -310,8 +310,8 @@ export default function Index() {
                 size="small"
                 sx={{ width: 250 }}
                 {...params}
-                onFocus={() => setFormat("MM/dd/yyyy")}
-                onBlur={() => setFormat("MM/dd/yyyy ccc")}
+                onFocus={() => setFormat("LL/dd/yyyy")}
+                onBlur={() => setFormat("ccc, LLL dd, yyyy")}
               />
             )}
           />

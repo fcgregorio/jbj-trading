@@ -56,6 +56,9 @@ export default function Create() {
 
   const [locked, setLocked] = React.useState(false);
 
+  const [dateOfDeliveryReceiptFormat, setDateOfDeliveryReceiptFormat] =
+    React.useState<string>("ccc, LLL dd, yyyy");
+
   const formik = useFormik<CreateOutTransaction>({
     initialValues: {
       customer: "",
@@ -253,7 +256,7 @@ export default function Create() {
         />
         <DesktopDatePicker
           label="Date of Delivery Receipt"
-          inputFormat="MM/dd/yyyy"
+          inputFormat={dateOfDeliveryReceiptFormat}
           maxDate={DateTime.now()}
           value={formik.values.dateOfDeliveryReceipt}
           onChange={(newValue) => {
@@ -265,7 +268,13 @@ export default function Create() {
               id="dateOfDeliveryReceipt"
               fullWidth
               variant="filled"
-              onBlur={formik.handleBlur}
+              onFocusCapture={() =>
+                setDateOfDeliveryReceiptFormat("LL/dd/yyyy")
+              }
+              onBlur={(event) => {
+                setDateOfDeliveryReceiptFormat("ccc, LLL dd, yyyy");
+                formik.handleBlur(event);
+              }}
               error={
                 formik.touched.dateOfDeliveryReceipt &&
                 Boolean(formik.errors.dateOfDeliveryReceipt)

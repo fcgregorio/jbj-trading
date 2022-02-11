@@ -252,6 +252,7 @@ export default function Edit() {
               <DateTimePicker
                 label="Created At"
                 value={formik.values.createdAt}
+                inputFormat={"ccc, LLL dd, yyyy, hh:mm:ss.SSS a"}
                 onChange={() => {}}
                 readOnly={true}
                 disabled={true}
@@ -262,6 +263,7 @@ export default function Edit() {
               <DateTimePicker
                 label="Updated At"
                 value={formik.values.updatedAt}
+                inputFormat={"ccc, LLL dd, yyyy, hh:mm:ss.SSS a"}
                 onChange={() => {}}
                 readOnly={true}
                 disabled={true}
@@ -272,6 +274,7 @@ export default function Edit() {
               <DateTimePicker
                 label="Deleted At"
                 value={formik.values.deletedAt}
+                inputFormat={"ccc, LLL dd, yyyy, hh:mm:ss.SSS a"}
                 onChange={() => {}}
                 readOnly={true}
                 disabled={true}

@@ -56,6 +56,11 @@ export default function Create() {
 
   const [locked, setLocked] = React.useState(false);
 
+  const [dateOfDeliveryReceiptFormat, setDateOfDeliveryReceiptFormat] =
+    React.useState<string>("ccc, LLL dd, yyyy");
+  const [dateReceivedFormat, setDateReceivedFormat] =
+    React.useState<string>("ccc, LLL dd, yyyy");
+
   const formik = useFormik<CreateInTransaction>({
     initialValues: {
       supplier: "",
@@ -257,7 +262,7 @@ export default function Create() {
         />
         <DesktopDatePicker
           label="Date of Delivery Receipt"
-          inputFormat="MM/dd/yyyy"
+          inputFormat={dateOfDeliveryReceiptFormat}
           maxDate={DateTime.now()}
           value={formik.values.dateOfDeliveryReceipt}
           onChange={(newValue) => {
@@ -269,7 +274,13 @@ export default function Create() {
               id="dateOfDeliveryReceipt"
               fullWidth
               variant="filled"
-              onBlur={formik.handleBlur}
+              onFocusCapture={() =>
+                setDateOfDeliveryReceiptFormat("LL/dd/yyyy")
+              }
+              onBlur={(event) => {
+                setDateOfDeliveryReceiptFormat("ccc, LLL dd, yyyy");
+                formik.handleBlur(event);
+              }}
               error={
                 formik.touched.dateOfDeliveryReceipt &&
                 Boolean(formik.errors.dateOfDeliveryReceipt)
@@ -283,7 +294,7 @@ export default function Create() {
         />
         <DesktopDatePicker
           label="Date Received"
-          inputFormat="MM/dd/yyyy"
+          inputFormat={dateReceivedFormat}
           maxDate={DateTime.now()}
           value={formik.values.dateReceived}
           onChange={(newValue) => {
@@ -295,7 +306,11 @@ export default function Create() {
               id="dateReceived"
               fullWidth
               variant="filled"
-              onBlur={formik.handleBlur}
+              onFocusCapture={() => setDateReceivedFormat("LL/dd/yyyy")}
+              onBlur={(event) => {
+                setDateReceivedFormat("ccc, LLL dd, yyyy");
+                formik.handleBlur(event);
+              }}
               error={
                 formik.touched.dateReceived &&
                 Boolean(formik.errors.dateReceived)

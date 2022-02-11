@@ -374,7 +374,7 @@ export default function Show() {
                 />
                 <DesktopDatePicker
                   label="Date of Delivery Receipt"
-                  inputFormat="MM/dd/yyyy"
+                  inputFormat={"ccc, LLL dd, yyyy"}
                   value={inTransaction!.dateOfDeliveryReceipt}
                   onChange={() => {}}
                   readOnly={true}
@@ -384,7 +384,7 @@ export default function Show() {
                 />
                 <DesktopDatePicker
                   label="Date Received"
-                  inputFormat="MM/dd/yyyy"
+                  inputFormat={"ccc, LLL dd, yyyy"}
                   value={inTransaction!.dateReceived}
                   onChange={() => {}}
                   readOnly={true}
@@ -409,6 +409,7 @@ export default function Show() {
                 <DateTimePicker
                   label="Created At"
                   value={inTransaction!.createdAt}
+                  inputFormat={"ccc, LLL dd, yyyy, hh:mm:ss.SSS a"}
                   onChange={() => {}}
                   readOnly={true}
                   renderInput={(params) => (
@@ -418,6 +419,7 @@ export default function Show() {
                 <DateTimePicker
                   label="Updated At"
                   value={inTransaction!.updatedAt}
+                  inputFormat={"ccc, LLL dd, yyyy, hh:mm:ss.SSS a"}
                   onChange={() => {}}
                   readOnly={true}
                   renderInput={(params) => (

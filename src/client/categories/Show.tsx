@@ -379,6 +379,7 @@ export default function Show() {
                 <DateTimePicker
                   label="Created At"
                   value={category.createdAt}
+                  inputFormat={"ccc, LLL dd, yyyy, hh:mm:ss.SSS a"}
                   onChange={() => {}}
                   readOnly={true}
                   renderInput={(params) => (
@@ -388,6 +389,7 @@ export default function Show() {
                 <DateTimePicker
                   label="Updated At"
                   value={category.updatedAt}
+                  inputFormat={"ccc, LLL dd, yyyy, hh:mm:ss.SSS a"}
                   onChange={() => {}}
                   readOnly={true}
                   renderInput={(params) => (
@@ -397,6 +399,7 @@ export default function Show() {
                 <DateTimePicker
                   label="Deleted At"
                   value={category!.deletedAt}
+                  inputFormat={"ccc, LLL dd, yyyy, hh:mm:ss.SSS a"}
                   onChange={() => {}}
                   readOnly={true}
                   renderInput={(params) => (

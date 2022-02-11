@@ -50,11 +50,17 @@ export default function Edit() {
   const { enqueueSnackbar, closeSnackbar } = useSnackbar();
 
   React.useEffect(() => {
-    document.title = `Edit Out-Transaction ${params.outTransactionID?.slice(0, 8)}`;
+    document.title = `Edit Out-Transaction ${params.outTransactionID?.slice(
+      0,
+      8
+    )}`;
   }, []);
 
   const [loading, setLoading] = React.useState(false);
   const [locked, setLocked] = React.useState(false);
+
+  const [dateOfDeliveryReceiptFormat, setDateOfDeliveryReceiptFormat] =
+    React.useState<string>("ccc, LLL dd, yyyy");
 
   const formik = useFormik<EditOutTransaction>({
     initialValues: {
@@ -252,7 +258,7 @@ export default function Edit() {
               />
               <DesktopDatePicker
                 label="Date of Delivery Receipt"
-                inputFormat="MM/dd/yyyy"
+                inputFormat={dateOfDeliveryReceiptFormat}
                 maxDate={DateTime.now()}
                 value={formik.values.dateOfDeliveryReceipt}
                 onChange={(newValue) => {
@@ -264,7 +270,13 @@ export default function Edit() {
                     id="dateOfDeliveryReceipt"
                     fullWidth
                     variant="filled"
-                    onBlur={formik.handleBlur}
+                    onFocusCapture={() =>
+                      setDateOfDeliveryReceiptFormat("LL/dd/yyyy")
+                    }
+                    onBlur={(event) => {
+                      setDateOfDeliveryReceiptFormat("ccc, LLL dd, yyyy");
+                      formik.handleBlur(event);
+                    }}
                     error={
                       formik.touched.dateOfDeliveryReceipt &&
                       Boolean(formik.errors.dateOfDeliveryReceipt)
@@ -296,6 +308,7 @@ export default function Edit() {
               <DateTimePicker
                 label="Created At"
                 value={formik.values.createdAt}
+                inputFormat={"ccc, LLL dd, yyyy, hh:mm:ss.SSS a"}
                 onChange={() => {}}
                 readOnly={true}
                 disabled={true}
@@ -306,6 +319,7 @@ export default function Edit() {
               <DateTimePicker
                 label="Updated At"
                 value={formik.values.updatedAt}
+                inputFormat={"ccc, LLL dd, yyyy, hh:mm:ss.SSS a"}
                 onChange={() => {}}
                 readOnly={true}
                 disabled={true}
