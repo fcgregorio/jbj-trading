@@ -225,20 +225,28 @@ export default function Index() {
         </TableCell>
         <TableCell>{row.supplier}</TableCell>
         <TableCell>{row.deliveryReceipt}</TableCell>
-        <TableCell align="right">
-          {row.dateOfDeliveryReceipt !== null
-            ? DateTime.fromISO(row.dateOfDeliveryReceipt)
-                .toLocal()
-                .toLocaleString(DateTime.DATE_SHORT)
-            : ""}
-        </TableCell>
-        <TableCell align="right">
-          {row.dateReceived !== null
-            ? DateTime.fromISO(row.dateReceived)
-                .toLocal()
-                .toLocaleString(DateTime.DATE_SHORT)
-            : ""}
-        </TableCell>
+        <TableCell
+          align="right"
+          dangerouslySetInnerHTML={{
+            __html:
+              row.dateOfDeliveryReceipt !== null
+                ? DateTime.fromISO(row.dateOfDeliveryReceipt)
+                    .toLocal()
+                    .toFormat("ccc, LLL'&nbsp;'dd,'&nbsp;'yyyy")
+                : "",
+          }}
+        />
+        <TableCell
+          align="right"
+          dangerouslySetInnerHTML={{
+            __html:
+              row.dateReceived !== null
+                ? DateTime.fromISO(row.dateReceived)
+                    .toLocal()
+                    .toFormat("ccc, LLL'&nbsp;'dd,'&nbsp;'yyyy")
+                : "",
+          }}
+        />
         <TableCell align="right">
           <Typography fontFamily="monospace" variant="body2">
             {row.void.toString()}
