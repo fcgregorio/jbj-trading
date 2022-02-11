@@ -1,4 +1,7 @@
-import { Search as SearchIcon } from "@mui/icons-material";
+import {
+  Refresh as RefreshIcon,
+  Search as SearchIcon,
+} from "@mui/icons-material";
 import {
   Box,
   Button,
@@ -53,6 +56,8 @@ export default function Index() {
 
   const [count, setCount] = React.useState<number | null>(null);
   const [transactions, setTransactions] = React.useState<Transaction[]>([]);
+
+  const [refresh, setRefresh] = React.useState<boolean>(false);
 
   async function handleExport() {
     const _date = dateTimeContext.isValid ? dateTimeContext.toISO() : null;
@@ -173,7 +178,7 @@ export default function Index() {
     return () => {
       cancelTokenSource.cancel();
     };
-  }, [queryTransactions, search, dateTimeContext, order]);
+  }, [queryTransactions, refresh, search, dateTimeContext, order]);
 
   async function handleLoadMoreClick() {
     setLoading(true);
@@ -401,6 +406,17 @@ export default function Index() {
           <DatePicker />
         </Stack>
         <Stack direction="row" spacing={2} sx={{ marginLeft: "auto" }}>
+          <Box>
+            <Button
+              startIcon={<RefreshIcon />}
+              variant="contained"
+              onClick={() => {
+                setRefresh(!refresh);
+              }}
+            >
+              Refresh
+            </Button>
+          </Box>
           {authContext?.user.admin && (
             <Box>
               <Button

@@ -1,4 +1,8 @@
-import { Add as AddIcon, Search as SearchIcon } from "@mui/icons-material";
+import {
+  Add as AddIcon,
+  Refresh as RefreshIcon,
+  Search as SearchIcon,
+} from "@mui/icons-material";
 import {
   Box,
   Button,
@@ -56,6 +60,8 @@ export default function Index() {
 
   const [count, setCount] = React.useState<number | null>(null);
   const [items, setItems] = React.useState<Item[]>([]);
+
+  const [refresh, setRefresh] = React.useState<boolean>(false);
 
   const queryItems = React.useMemo(
     () =>
@@ -146,7 +152,7 @@ export default function Index() {
     return () => {
       cancelTokenSource.cancel();
     };
-  }, [queryItems, search, filterMenuShowDeleted, order]);
+  }, [queryItems, refresh, search, filterMenuShowDeleted, order]);
 
   async function handleLoadMoreClick() {
     setLoading(true);
@@ -344,6 +350,17 @@ export default function Index() {
           )}
         </Stack>
         <Stack direction="row" spacing={2} sx={{ marginLeft: "auto" }}>
+          <Box>
+            <Button
+              startIcon={<RefreshIcon />}
+              variant="contained"
+              onClick={() => {
+                setRefresh(!refresh);
+              }}
+            >
+              Refresh
+            </Button>
+          </Box>
           {authContext?.user.admin && (
             <Box>
               <Button

@@ -42,11 +42,7 @@ export default () => {
   const [count, setCount] = React.useState<number | null>(null);
   const [items, setItems] = React.useState<Item[]>([]);
 
-  const [click, setClick] = React.useState<boolean>(false);
-
-  function handleRefresh() {
-    setClick(!click);
-  }
+  const [refresh, setRefresh] = React.useState<boolean>(false);
 
   const queryItems = React.useMemo(
     () =>
@@ -124,7 +120,7 @@ export default () => {
     return () => {
       cancelTokenSource.cancel();
     };
-  }, [queryItems, click, order]);
+  }, [queryItems, refresh, order]);
 
   async function handleLoadMoreClick() {
     setLoading(true);
@@ -231,17 +227,17 @@ export default () => {
           </Box>
         </Stack>
         <Stack direction="row" spacing={2} sx={{ marginLeft: "auto" }}>
-          {authContext?.user.admin && (
-            <Box>
-              <Button
-                startIcon={<RefreshIcon />}
-                variant="contained"
-                onClick={handleRefresh}
-              >
-                Refresh
-              </Button>
-            </Box>
-          )}
+          <Box>
+            <Button
+              startIcon={<RefreshIcon />}
+              variant="contained"
+              onClick={() => {
+                setRefresh(!refresh);
+              }}
+            >
+              Refresh
+            </Button>
+          </Box>
         </Stack>
       </Box>
       <TableContainer

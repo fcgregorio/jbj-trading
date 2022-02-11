@@ -1,6 +1,10 @@
-import { Search as SearchIcon } from "@mui/icons-material";
+import {
+  Refresh as RefreshIcon,
+  Search as SearchIcon,
+} from "@mui/icons-material";
 import {
   Box,
+  Button,
   InputAdornment,
   LinearProgress,
   Link,
@@ -49,6 +53,8 @@ export default function Index() {
 
   const [count, setCount] = React.useState<number | null>(null);
   const [inTransfers, setInTransfers] = React.useState<InTransfer[]>([]);
+
+  const [refresh, setRefresh] = React.useState<boolean>(false);
 
   const queryInTransfers = React.useMemo(
     () =>
@@ -142,7 +148,7 @@ export default function Index() {
     return () => {
       cancelTokenSource.cancel();
     };
-  }, [queryInTransfers, search, dateTimeContext, order]);
+  }, [queryInTransfers, refresh, search, dateTimeContext, order]);
 
   async function handleLoadMoreClick() {
     setLoading(true);
@@ -302,7 +308,19 @@ export default function Index() {
           />
           <DatePicker />
         </Stack>
-        <Stack direction="row" spacing={2} sx={{ marginLeft: "auto" }}></Stack>
+        <Stack direction="row" spacing={2} sx={{ marginLeft: "auto" }}>
+          <Box>
+            <Button
+              startIcon={<RefreshIcon />}
+              variant="contained"
+              onClick={() => {
+                setRefresh(!refresh);
+              }}
+            >
+              Refresh
+            </Button>
+          </Box>
+        </Stack>
       </Box>
       <TableContainer
         sx={{
