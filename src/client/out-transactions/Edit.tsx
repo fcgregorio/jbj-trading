@@ -35,6 +35,7 @@ import {
 } from "react-router-dom";
 import { useAsyncEffect } from "use-async-effect";
 import * as Yup from "yup";
+import SaveDialogButton from "../SaveDialogButton";
 import { Android12Switch } from "../Switch";
 import {
   ApiEditOutTransaction,
@@ -57,7 +58,6 @@ export default function Edit() {
   }, []);
 
   const [loading, setLoading] = React.useState(false);
-  const [locked, setLocked] = React.useState(false);
 
   const dateOfDeliveryReceiptInputRef = React.useRef<HTMLInputElement>(null);
   const [dateOfDeliveryReceiptFormat, setDateOfDeliveryReceiptFormat] =
@@ -81,7 +81,6 @@ export default function Edit() {
       void: Yup.boolean().required("Required"),
     }),
     onSubmit: async (values) => {
-      setLocked(true);
       await axios
         .put<
           { id: string },
@@ -112,9 +111,6 @@ export default function Edit() {
               formik.setFieldError(e.path, e.message);
             }
           }
-        })
-        .finally(() => {
-          setLocked(false);
         });
     },
   });
@@ -192,19 +188,12 @@ export default function Edit() {
             </Stack>
             {formik.dirty && (
               <Stack direction="row" spacing={2} sx={{ marginLeft: "auto" }}>
-                <LoadingButton
+                <SaveDialogButton
+                  message="This will void the Out-Transaction. Are you sure you want to save?"
                   disabled={!formik.isValid}
-                  loading={locked}
-                  loadingPosition="start"
-                  startIcon={<SaveIcon />}
-                  variant="contained"
-                  onClick={() => {
-                    formik.submitForm();
-                  }}
-                >
-                  Save
-                </LoadingButton>
-                <Dialog open={locked} />
+                  useDialog={!formik.values.disableVoid && formik.values.void}
+                  handleSave={formik.submitForm}
+                />
               </Stack>
             )}
           </Box>
