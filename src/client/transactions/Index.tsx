@@ -1,4 +1,5 @@
 import {
+  Download as DownloadIcon,
   Refresh as RefreshIcon,
   Search as SearchIcon,
 } from "@mui/icons-material";
@@ -420,7 +421,7 @@ export default function Index() {
           {authContext?.user.admin && (
             <Box>
               <Button
-                // startIcon={<AddIcon />}
+                startIcon={<DownloadIcon />}
                 disabled={!dateTimeContext.isValid}
                 variant="contained"
                 onClick={handleExport}
