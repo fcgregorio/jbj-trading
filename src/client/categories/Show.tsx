@@ -119,9 +119,9 @@ function History() {
   return (
     <TableContainer
       sx={{
-        flex: "1 1 auto",
+        flex: "1 0 auto",
         overflowY: "scroll",
-        minHeight: "720px",
+        height: "100vh",
       }}
     >
       <Table size="small" stickyHeader>
