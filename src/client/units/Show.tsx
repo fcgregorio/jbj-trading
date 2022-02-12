@@ -176,16 +176,6 @@ function History() {
               <TableCell
                 align="right"
                 dangerouslySetInnerHTML={{
-                  __html: DateTime.fromISO(row.createdAt)
-                    .toLocal()
-                    .toFormat(
-                      "ccc, LLL'&nbsp;'dd,'&nbsp;'yyyy, hh:mm:ss.SSS'&nbsp;'a"
-                    ),
-                }}
-              />
-              <TableCell
-                align="right"
-                dangerouslySetInnerHTML={{
                   __html: DateTime.fromISO(row.updatedAt)
                     .toLocal()
                     .toFormat(
