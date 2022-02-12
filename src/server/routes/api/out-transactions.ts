@@ -30,11 +30,13 @@ router.post(
   "/",
   async function (req: Request, res: Response, next: NextFunction) {
     try {
-      let dateOfDeliveryReceipt = req.body.dateOfDeliveryReceipt;
+      let dateOfDeliveryReceipt: string | null = req.body.dateOfDeliveryReceipt;
       try {
-        dateOfDeliveryReceipt = DateTime.fromISO(dateOfDeliveryReceipt, {
-          setZone: true,
-        }).toFormat("yyyy-LL-dd");
+        dateOfDeliveryReceipt = dateOfDeliveryReceipt
+          ? DateTime.fromISO(dateOfDeliveryReceipt!, {
+              setZone: true,
+            }).toFormat("yyyy-LL-dd")
+          : dateOfDeliveryReceipt;
       } catch (err) {
         // no-op
       }
@@ -405,11 +407,13 @@ router.put(
   adminRequiredMiddleware,
   async function (req: Request, res: Response, next: NextFunction) {
     try {
-      let dateOfDeliveryReceipt = req.body.dateOfDeliveryReceipt;
+      let dateOfDeliveryReceipt: string | null = req.body.dateOfDeliveryReceipt;
       try {
-        dateOfDeliveryReceipt = DateTime.fromISO(dateOfDeliveryReceipt, {
-          setZone: true,
-        }).toFormat("yyyy-LL-dd");
+        dateOfDeliveryReceipt = dateOfDeliveryReceipt
+          ? DateTime.fromISO(dateOfDeliveryReceipt!, {
+              setZone: true,
+            }).toFormat("yyyy-LL-dd")
+          : dateOfDeliveryReceipt;
       } catch (err) {
         // no-op
       }

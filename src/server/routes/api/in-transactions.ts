@@ -30,15 +30,19 @@ router.post(
   "/",
   async function (req: Request, res: Response, next: NextFunction) {
     try {
-      let dateOfDeliveryReceipt = req.body.dateOfDeliveryReceipt;
-      let dateReceived = req.body.dateReceived;
+      let dateOfDeliveryReceipt: string | null = req.body.dateOfDeliveryReceipt;
+      let dateReceived: string | null = req.body.dateReceived;
       try {
-        dateOfDeliveryReceipt = DateTime.fromISO(dateOfDeliveryReceipt, {
-          setZone: true,
-        }).toFormat("yyyy-LL-dd");
-        dateReceived = DateTime.fromISO(dateReceived, {
-          setZone: true,
-        }).toFormat("yyyy-LL-dd");
+        dateOfDeliveryReceipt = dateOfDeliveryReceipt
+          ? DateTime.fromISO(dateOfDeliveryReceipt!, {
+              setZone: true,
+            }).toFormat("yyyy-LL-dd")
+          : dateOfDeliveryReceipt;
+        dateReceived = dateReceived
+          ? DateTime.fromISO(dateReceived!, {
+              setZone: true,
+            }).toFormat("yyyy-LL-dd")
+          : dateReceived;
       } catch (err) {
         // no-op
       }
@@ -411,15 +415,19 @@ router.put(
   adminRequiredMiddleware,
   async function (req: Request, res: Response, next: NextFunction) {
     try {
-      let dateOfDeliveryReceipt = req.body.dateOfDeliveryReceipt;
-      let dateReceived = req.body.dateReceived;
+      let dateOfDeliveryReceipt: string | null = req.body.dateOfDeliveryReceipt;
+      let dateReceived: string | null = req.body.dateReceived;
       try {
-        dateOfDeliveryReceipt = DateTime.fromISO(dateOfDeliveryReceipt, {
-          setZone: true,
-        }).toFormat("yyyy-LL-dd");
-        dateReceived = DateTime.fromISO(dateReceived, {
-          setZone: true,
-        }).toFormat("yyyy-LL-dd");
+        dateOfDeliveryReceipt = dateOfDeliveryReceipt
+          ? DateTime.fromISO(dateOfDeliveryReceipt!, {
+              setZone: true,
+            }).toFormat("yyyy-LL-dd")
+          : dateOfDeliveryReceipt;
+        dateReceived = dateReceived
+          ? DateTime.fromISO(dateReceived!, {
+              setZone: true,
+            }).toFormat("yyyy-LL-dd")
+          : dateReceived;
       } catch (err) {
         // no-op
       }
