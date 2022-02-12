@@ -120,7 +120,7 @@ function History() {
       sx={{
         flex: "1 1 auto",
         overflowY: "scroll",
-        minHeight: "360px",
+        minHeight: "720px",
       }}
     >
       <Table size="small" stickyHeader>
@@ -135,7 +135,6 @@ function History() {
             <TableCell>Unit</TableCell>
             <TableCell>Category</TableCell>
             <TableCell>Remarks</TableCell>
-            <TableCell align="right">Created At</TableCell>
             <TableCell>Supplier/Customer</TableCell>
             <TableCell>Transaction ID</TableCell>
             <TableCell align="right">Updated At</TableCell>
@@ -146,7 +145,7 @@ function History() {
           {count !== null && (
             <TableRow>
               <TableCell
-                colSpan={14}
+                colSpan={13}
                 align="right"
                 sx={{ background: "rgba(0, 0, 0, 0.06)" }}
               >
@@ -223,16 +222,6 @@ function History() {
                 </TableCell>
                 <TableCell>{row.Unit.name}</TableCell>
                 <TableCell>{row.Category.name}</TableCell>
-                <TableCell
-                  align="right"
-                  dangerouslySetInnerHTML={{
-                    __html: DateTime.fromISO(row.createdAt)
-                      .toLocal()
-                      .toFormat(
-                        "ccc, LLL'&nbsp;'dd,'&nbsp;'yyyy, hh:mm:ss.SSS'&nbsp;'a"
-                      ),
-                  }}
-                />
                 <TableCell>
                   <Tooltip title={row.remarks} placement="right">
                     <span>
@@ -349,7 +338,7 @@ function History() {
                 sx={{ cursor: "pointer" }}
               >
                 <TableCell
-                  colSpan={14}
+                  colSpan={13}
                   align="center"
                   sx={{ background: "rgba(0, 0, 0, 0.06)" }}
                 >
@@ -359,7 +348,7 @@ function History() {
             ))}
           {loading && (
             <TableRow>
-              <TableCell colSpan={14} padding="none">
+              <TableCell colSpan={13} padding="none">
                 <LinearProgress />
               </TableCell>
             </TableRow>

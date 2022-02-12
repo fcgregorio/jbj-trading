@@ -128,7 +128,7 @@ function History() {
       sx={{
         flex: "1 1 auto",
         overflowY: "scroll",
-        minHeight: "360px",
+        minHeight: "720px",
       }}
     >
       <Table size="small" stickyHeader>
@@ -141,7 +141,6 @@ function History() {
             <TableCell align="right">Date of Delivery Receipt</TableCell>
             <TableCell align="right">Date Received</TableCell>
             <TableCell align="right">Void</TableCell>
-            <TableCell align="right">Created At</TableCell>
             <TableCell align="right">Updated At</TableCell>
           </TableRow>
         </TableHead>
@@ -149,7 +148,7 @@ function History() {
           {count !== null && (
             <TableRow>
               <TableCell
-                colSpan={9}
+                colSpan={8}
                 align="right"
                 sx={{ background: "rgba(0, 0, 0, 0.06)" }}
               >
@@ -245,7 +244,7 @@ function History() {
                 sx={{ cursor: "pointer" }}
               >
                 <TableCell
-                  colSpan={9}
+                  colSpan={8}
                   align="center"
                   sx={{ background: "rgba(0, 0, 0, 0.06)" }}
                 >
@@ -255,7 +254,7 @@ function History() {
             ))}
           {loading && (
             <TableRow>
-              <TableCell colSpan={9} padding="none">
+              <TableCell colSpan={8} padding="none">
                 <LinearProgress />
               </TableCell>
             </TableRow>
