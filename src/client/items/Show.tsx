@@ -130,11 +130,14 @@ function History() {
             <TableCell>History User</TableCell>
             <TableCell>Name</TableCell>
             <TableCell align="right">Stock</TableCell>
+            <TableCell align="right">Quantity</TableCell>
             <TableCell align="right">Safety Stock</TableCell>
             <TableCell>Unit</TableCell>
             <TableCell>Category</TableCell>
             <TableCell>Remarks</TableCell>
             <TableCell align="right">Created At</TableCell>
+            <TableCell>Supplier/Customer</TableCell>
+            <TableCell>Transaction ID</TableCell>
             <TableCell align="right">Updated At</TableCell>
             <TableCell align="right">Deleted At</TableCell>
           </TableRow>
@@ -143,7 +146,7 @@ function History() {
           {count !== null && (
             <TableRow>
               <TableCell
-                colSpan={11}
+                colSpan={14}
                 align="right"
                 sx={{ background: "rgba(0, 0, 0, 0.06)" }}
               >
@@ -186,6 +189,33 @@ function History() {
                     {row.stock}
                   </Typography>
                 </TableCell>
+                {row.transfer && row.transfer.InTransfer && (
+                  <TableCell align="right">
+                    <Typography fontFamily="monospace" variant="body2">
+                      {row.transfer.InTransfer.InTransaction.void
+                        ? "void "
+                        : ""}
+                      +{row.transfer.InTransfer.quantity}
+                    </Typography>
+                  </TableCell>
+                )}
+                {row.transfer && row.transfer.OutTransfer && (
+                  <TableCell align="right">
+                    <Typography fontFamily="monospace" variant="body2">
+                      {row.transfer.OutTransfer.OutTransaction.void
+                        ? "void "
+                        : ""}
+                      -{row.transfer.OutTransfer.quantity}
+                    </Typography>
+                  </TableCell>
+                )}
+                {!row.transfer && (
+                  <TableCell
+                    sx={{
+                      background: "rgba(0, 0, 0, 0.12)",
+                    }}
+                  ></TableCell>
+                )}
                 <TableCell align="right">
                   <Typography fontFamily="monospace" variant="body2">
                     {row.safetyStock}
@@ -193,7 +223,6 @@ function History() {
                 </TableCell>
                 <TableCell>{row.Unit.name}</TableCell>
                 <TableCell>{row.Category.name}</TableCell>
-                <TableCell>{row.remarks}</TableCell>
                 <TableCell
                   align="right"
                   dangerouslySetInnerHTML={{
@@ -204,6 +233,87 @@ function History() {
                       ),
                   }}
                 />
+                <TableCell>
+                  <Tooltip title={row.remarks} placement="right">
+                    <span>
+                      {row.remarks.substring(0, 8) + row.remarks.length > 8
+                        ? "..."
+                        : ""}
+                    </span>
+                  </Tooltip>
+                </TableCell>
+                {row.transfer && row.transfer.InTransfer && (
+                  <TableCell>
+                    <Typography>
+                      {row.transfer.InTransfer.InTransaction.supplier}
+                    </Typography>
+                  </TableCell>
+                )}
+                {row.transfer && row.transfer.OutTransfer && (
+                  <TableCell>
+                    <Typography>
+                      {row.transfer.OutTransfer.OutTransaction.customer}
+                    </Typography>
+                  </TableCell>
+                )}
+                {!row.transfer && (
+                  <TableCell
+                    sx={{
+                      background: "rgba(0, 0, 0, 0.12)",
+                    }}
+                  ></TableCell>
+                )}
+                {row.transfer && row.transfer.InTransfer && (
+                  <TableCell>
+                    <Tooltip
+                      title={row.transfer.InTransfer.InTransaction.id}
+                      placement="right"
+                    >
+                      <Link
+                        underline="none"
+                        component={RouterLink}
+                        to={`/in-transactions/${row.transfer.InTransfer.InTransaction.id}`}
+                        color={"text.primary"}
+                      >
+                        <Typography fontFamily="monospace" variant="body2">
+                          {row.transfer.InTransfer.InTransaction.id.substring(
+                            0,
+                            8
+                          )}
+                        </Typography>
+                      </Link>
+                    </Tooltip>
+                  </TableCell>
+                )}
+                {row.transfer && row.transfer.OutTransfer && (
+                  <TableCell>
+                    <Tooltip
+                      title={row.transfer.OutTransfer.OutTransaction.id}
+                      placement="right"
+                    >
+                      <Link
+                        underline="none"
+                        component={RouterLink}
+                        to={`/out-transactions/${row.transfer.OutTransfer.OutTransaction.id}`}
+                        color={"text.primary"}
+                      >
+                        <Typography fontFamily="monospace" variant="body2">
+                          {row.transfer.OutTransfer.OutTransaction.id.substring(
+                            0,
+                            8
+                          )}
+                        </Typography>
+                      </Link>
+                    </Tooltip>
+                  </TableCell>
+                )}
+                {!row.transfer && (
+                  <TableCell
+                    sx={{
+                      background: "rgba(0, 0, 0, 0.12)",
+                    }}
+                  ></TableCell>
+                )}
                 <TableCell
                   align="right"
                   dangerouslySetInnerHTML={{
@@ -228,120 +338,6 @@ function History() {
                   }}
                 />
               </TableRow>
-              {row.transfer && row.transfer.InTransfer && (
-                <React.Fragment>
-                  <TableRow
-                    key={row.id}
-                    sx={{
-                      "&:last-child td, &:last-child th": { border: 0 },
-                    }}
-                  >
-                    <TableCell rowSpan={2} />
-                    <TableCell sx={{ fontWeight: "medium" }}>
-                      Transaction ID
-                    </TableCell>
-                    <TableCell sx={{ fontWeight: "medium" }}>
-                      Supplier
-                    </TableCell>
-                    <TableCell align="right" sx={{ fontWeight: "medium" }}>
-                      Quantity
-                    </TableCell>
-                    <TableCell rowSpan={2} colSpan={7} />
-                  </TableRow>
-                  <TableRow
-                    key={row.id}
-                    sx={{
-                      "&:last-child td, &:last-child th": { border: 0 },
-                    }}
-                  >
-                    <TableCell>
-                      <Tooltip
-                        title={row.transfer.InTransfer.InTransaction.id}
-                        placement="right"
-                      >
-                        <Link
-                          underline="none"
-                          component={RouterLink}
-                          to={`/in-transactions/${row.transfer.InTransfer.InTransaction.id}`}
-                          color={"text.primary"}
-                        >
-                          <Typography fontFamily="monospace" variant="body2">
-                            {row.transfer.InTransfer.InTransaction.id.substring(
-                              0,
-                              8
-                            )}
-                          </Typography>
-                        </Link>
-                      </Tooltip>
-                    </TableCell>
-                    <TableCell>
-                      {row.transfer.InTransfer.InTransaction.supplier}
-                    </TableCell>
-                    <TableCell align="right">
-                      <Typography fontFamily="monospace" variant="body2">
-                        +{row.transfer.InTransfer.quantity}
-                      </Typography>
-                    </TableCell>
-                  </TableRow>
-                </React.Fragment>
-              )}
-              {row.transfer && row.transfer.OutTransfer && (
-                <React.Fragment>
-                  <TableRow
-                    key={row.id}
-                    sx={{
-                      "&:last-child td, &:last-child th": { border: 0 },
-                    }}
-                  >
-                    <TableCell rowSpan={2} />
-                    <TableCell sx={{ fontWeight: "medium" }}>
-                      Transaction ID
-                    </TableCell>
-                    <TableCell sx={{ fontWeight: "medium" }}>
-                      Customer
-                    </TableCell>
-                    <TableCell align="right" sx={{ fontWeight: "medium" }}>
-                      Quantity
-                    </TableCell>
-                    <TableCell rowSpan={2} colSpan={7} />
-                  </TableRow>
-                  <TableRow
-                    key={row.id}
-                    sx={{
-                      "&:last-child td, &:last-child th": { border: 0 },
-                    }}
-                  >
-                    <TableCell>
-                      <Tooltip
-                        title={row.transfer.OutTransfer.OutTransaction.id}
-                        placement="right"
-                      >
-                        <Link
-                          underline="none"
-                          component={RouterLink}
-                          to={`/out-transactions/${row.transfer.OutTransfer.OutTransaction.id}`}
-                          color={"text.primary"}
-                        >
-                          <Typography fontFamily="monospace" variant="body2">
-                            {row.transfer.OutTransfer.OutTransaction.id.substring(
-                              0,
-                              8
-                            )}
-                          </Typography>
-                        </Link>
-                      </Tooltip>
-                    </TableCell>
-                    <TableCell>
-                      {row.transfer.OutTransfer.OutTransaction.customer}
-                    </TableCell>
-                    <TableCell align="right">
-                      <Typography fontFamily="monospace" variant="body2">
-                        -{row.transfer.OutTransfer.quantity}
-                      </Typography>
-                    </TableCell>
-                  </TableRow>
-                </React.Fragment>
-              )}
             </React.Fragment>
           ))}
           {loading ||
@@ -353,7 +349,7 @@ function History() {
                 sx={{ cursor: "pointer" }}
               >
                 <TableCell
-                  colSpan={11}
+                  colSpan={14}
                   align="center"
                   sx={{ background: "rgba(0, 0, 0, 0.06)" }}
                 >
@@ -363,7 +359,7 @@ function History() {
             ))}
           {loading && (
             <TableRow>
-              <TableCell colSpan={11} padding="none">
+              <TableCell colSpan={14} padding="none">
                 <LinearProgress />
               </TableCell>
             </TableRow>

@@ -344,7 +344,7 @@ router.get(
       );
 
       const transfers = await Transfer.findAll({
-        attributes: ["createdAt"],
+        attributes: ["createdAt", "updatedAt"],
         include: [
           {
             model: InTransfer,
@@ -352,7 +352,7 @@ router.get(
             include: [
               {
                 model: InTransaction,
-                attributes: ["id", "supplier"],
+                attributes: ["id", "supplier", "void"],
               },
             ],
             required: false,
@@ -363,7 +363,7 @@ router.get(
             include: [
               {
                 model: OutTransaction,
-                attributes: ["id", "customer"],
+                attributes: ["id", "customer", "void"],
               },
             ],
             required: false,
@@ -381,8 +381,24 @@ router.get(
             },
             {
               [Op.and]: {
+                "$InTransfer.item$": req.params.id,
+                "$InTransfer.updatedAt$": {
+                  [Op.in]: updatedAts,
+                },
+              },
+            },
+            {
+              [Op.and]: {
                 "$OutTransfer.item$": req.params.id,
                 "$OutTransfer.createdAt$": {
+                  [Op.in]: updatedAts,
+                },
+              },
+            },
+            {
+              [Op.and]: {
+                "$OutTransfer.item$": req.params.id,
+                "$OutTransfer.updatedAt$": {
                   [Op.in]: updatedAts,
                 },
               },
@@ -391,16 +407,23 @@ router.get(
         },
       });
 
-      const keyedTransfers = _.keyBy(transfers, (transfer) =>
+      const keyedByCreatedAtTransfers = _.keyBy(transfers, (transfer) =>
         transfer.createdAt.toISOString()
+      );
+      const keyedByUpdatedAtTransfers = _.keyBy(transfers, (transfer) =>
+        transfer.updatedAt.toISOString()
       );
 
       res.status(200).json({
         count: count,
         results: results.map((result) => {
+          const updatedAt = result.updatedAt.toISOString();
           const clone = JSON.parse(JSON.stringify(result));
           clone.transfer = null;
-          clone.transfer = keyedTransfers[result.updatedAt.toISOString()];
+          clone.transfer = keyedByCreatedAtTransfers[updatedAt];
+          if (_.has(keyedByUpdatedAtTransfers, updatedAt)) {
+            clone.transfer = keyedByUpdatedAtTransfers[updatedAt];
+          }
           return clone;
         }),
       });
