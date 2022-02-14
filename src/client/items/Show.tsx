@@ -115,6 +115,8 @@ function History() {
       });
   }
 
+  const [numberFormat] = React.useState(new Intl.NumberFormat("en-US"));
+
   return (
     <TableContainer
       sx={{
@@ -185,7 +187,7 @@ function History() {
                 <TableCell>{row.name}</TableCell>
                 <TableCell align="right">
                   <Typography fontFamily="monospace" variant="body2">
-                    {row.stock}
+                    {numberFormat.format(row.stock)}
                   </Typography>
                 </TableCell>
                 {row.transfer && row.transfer.InTransfer && (
@@ -194,7 +196,7 @@ function History() {
                       {row.transfer.InTransfer.InTransaction.void
                         ? "void "
                         : ""}
-                      +{row.transfer.InTransfer.quantity}
+                      +{numberFormat.format(row.transfer.InTransfer.quantity)}
                     </Typography>
                   </TableCell>
                 )}
@@ -204,7 +206,7 @@ function History() {
                       {row.transfer.OutTransfer.OutTransaction.void
                         ? "void "
                         : ""}
-                      -{row.transfer.OutTransfer.quantity}
+                      -{numberFormat.format(row.transfer.OutTransfer.quantity)}
                     </Typography>
                   </TableCell>
                 )}
@@ -217,7 +219,7 @@ function History() {
                 )}
                 <TableCell align="right">
                   <Typography fontFamily="monospace" variant="body2">
-                    {row.safetyStock}
+                    {numberFormat.format(row.safetyStock)}
                   </Typography>
                 </TableCell>
                 <TableCell>{row.Unit.name}</TableCell>

@@ -169,6 +169,8 @@ export default () => {
     }
   }
 
+  const [numberFormat] = React.useState(new Intl.NumberFormat("en-US"))
+
   const rows = React.useMemo(() => {
     return items.map((row: any) => (
       <TableRow
@@ -192,12 +194,12 @@ export default () => {
         <TableCell>{row.name}</TableCell>
         <TableCell align="right">
           <Typography fontFamily="monospace" variant="body2">
-            {row.stock}
+            {numberFormat.format(row.stock)}
           </Typography>
         </TableCell>
         <TableCell align="right">
           <Typography fontFamily="monospace" variant="body2">
-            {row.safetyStock}
+            {numberFormat.format(row.safetyStock)}
           </Typography>
         </TableCell>
         <TableCell>{row.Unit.name}</TableCell>

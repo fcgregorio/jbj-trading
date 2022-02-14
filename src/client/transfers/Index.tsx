@@ -199,6 +199,8 @@ export default function Index() {
     }
   }
 
+  const [numberFormat] = React.useState(new Intl.NumberFormat("en-US"))
+
   const rows = React.useMemo(() => {
     return transfers.map((row: any) => (
       <TableRow
@@ -243,7 +245,9 @@ export default function Index() {
               </Tooltip>
             </TableCell>
             <TableCell>{row.InTransfer.Item.name}</TableCell>
-            <TableCell align="right">{row.InTransfer.quantity}</TableCell>
+            <TableCell align="right">
+              {numberFormat.format(row.InTransfer.quantity)}
+            </TableCell>
             <TableCell>{row.InTransfer.Item.Unit.name}</TableCell>
             <TableCell>{row.InTransfer.Item.Category.name}</TableCell>
             <TableCell align="right">
@@ -289,7 +293,9 @@ export default function Index() {
               </Tooltip>
             </TableCell>
             <TableCell>{row.OutTransfer.Item.name}</TableCell>
-            <TableCell align="right">{row.OutTransfer.quantity}</TableCell>
+            <TableCell align="right">
+              {numberFormat.format(row.OutTransfer.quantity)}
+            </TableCell>
             <TableCell>{row.OutTransfer.Item.Unit.name}</TableCell>
             <TableCell>{row.OutTransfer.Item.Category.name}</TableCell>
             <TableCell align="right">

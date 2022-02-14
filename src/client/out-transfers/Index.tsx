@@ -202,6 +202,8 @@ export default function Index() {
     }
   }
 
+  const [numberFormat] = React.useState(new Intl.NumberFormat("en-US"))
+
   const rows = React.useMemo(() => {
     return outTransfers.map((row: any) => (
       <TableRow
@@ -241,7 +243,7 @@ export default function Index() {
         <TableCell>{row.Item.name}</TableCell>
         <TableCell align="right">
           <Typography fontFamily="monospace" variant="body2">
-            {row.quantity}
+            {numberFormat.format(row.quantity)}
           </Typography>
         </TableCell>
         <TableCell>{row.Item.Unit.name}</TableCell>

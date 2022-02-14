@@ -161,6 +161,8 @@ export default function Edit() {
     [location.pathname]
   );
 
+  const [numberFormat] = React.useState(new Intl.NumberFormat("en-US"))
+
   return (
     <Stack
       sx={{
@@ -452,7 +454,7 @@ export default function Edit() {
                                 fontFamily="monospace"
                                 variant="body2"
                               >
-                                {row.quantity}
+                                {numberFormat.format(row.quantity!)}
                               </Typography>
                             </TableCell>
                             <TableCell>{row.Item!.Unit.name}</TableCell>
