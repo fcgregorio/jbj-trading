@@ -177,10 +177,10 @@ export default function Create() {
           </Box>
         </Stack>
         <Stack direction="row" spacing={2} sx={{ marginLeft: "auto" }}>
-          <ButtonGroup>
+          <Box>
             <LoadingButton
               disabled={!formik.dirty || !formik.isValid}
-              loading={locked}
+              loading={locked && !formik.values.altSubmit}
               loadingPosition="start"
               startIcon={<SaveIcon />}
               variant="contained"
@@ -191,11 +191,13 @@ export default function Create() {
             >
               Save
             </LoadingButton>
+          </Box>
+          <Box>
             <LoadingButton
               disabled={!formik.dirty || !formik.isValid}
-              loading={locked}
-              loadingIndicator=""
+              loading={locked && formik.values.altSubmit}
               loadingPosition="start"
+              startIcon={<SaveIcon />}
               variant="contained"
               onClick={async () => {
                 await formik.setFieldValue("altSubmit", true);
@@ -204,7 +206,7 @@ export default function Create() {
             >
               Save &amp; Add Another
             </LoadingButton>
-          </ButtonGroup>
+          </Box>
           <Dialog open={locked} />
         </Stack>
       </Box>
