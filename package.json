@@ -1,5 +1,5 @@
 {
-  "name": "olbes",
+  "name": "jbj-trading",
   "version": "0.1.0",
   "private": true,
   "bin": "build/server.js",

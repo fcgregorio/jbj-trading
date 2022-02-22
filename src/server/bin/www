@@ -16,7 +16,7 @@ if (dotenvResult.error) {
 Logger.debug(process.env.NODE_ENV);
 Logger.debug(dotenvResult.parsed);
 
-debug("olbes:server");
+debug("jbj-trading:server");
 
 /**
  * Get port from environment and store in Express.

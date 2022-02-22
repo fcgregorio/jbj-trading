@@ -66,7 +66,7 @@ function useLocalStorage<T>(key: string, initialValue: T) {
 
 function Index() {
   React.useEffect(() => {
-    document.title = `Olbes`;
+    document.title = `JBJ Trading`;
   }, []);
 
   return null;
