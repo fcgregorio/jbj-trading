@@ -267,7 +267,7 @@ export default function Show() {
     [location.pathname]
   );
 
-  const [numberFormat] = React.useState(new Intl.NumberFormat("en-US"))
+  const [numberFormat] = React.useState(new Intl.NumberFormat("en-US"));
 
   return (
     <Stack

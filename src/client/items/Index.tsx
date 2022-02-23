@@ -205,7 +205,7 @@ export default function Index() {
     }
   }
 
-  const [numberFormat] = React.useState(new Intl.NumberFormat("en-US"))
+  const [numberFormat] = React.useState(new Intl.NumberFormat("en-US"));
 
   const rows = React.useMemo(() => {
     return items.map((row: any) => (
