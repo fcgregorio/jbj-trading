@@ -269,28 +269,22 @@ export default function Index() {
               }}
             ></TableCell>
             <TableCell>{row.InTransaction.deliveryReceipt}</TableCell>
-            <TableCell
-              align="right"
-              dangerouslySetInnerHTML={{
-                __html:
-                  row.InTransaction.dateOfDeliveryReceipt !== null
-                    ? DateTime.fromISO(row.InTransaction.dateOfDeliveryReceipt)
-                        .toLocal()
-                        .toFormat("ccc, LLL'&nbsp;'dd,'&nbsp;'yyyy")
-                    : "",
-              }}
-            />
-            <TableCell
-              align="right"
-              dangerouslySetInnerHTML={{
-                __html:
-                  row.InTransaction.dateReceived !== null
-                    ? DateTime.fromISO(row.InTransaction.dateReceived)
-                        .toLocal()
-                        .toFormat("ccc, LLL'&nbsp;'dd,'&nbsp;'yyyy")
-                    : "",
-              }}
-            />
+            <TableCell align="right">
+              {row.InTransaction.dateOfDeliveryReceipt !== null
+                ? DateTime.fromISO(row.InTransaction.dateOfDeliveryReceipt)
+                    .toLocal()
+                    .toFormat("ccc, LLL  dd,  yyyy")
+                    .replace(/ {2}/g, "\u00a0")
+                : ""}
+            </TableCell>
+            <TableCell align="right">
+              {row.InTransaction.dateReceived !== null
+                ? DateTime.fromISO(row.InTransaction.dateReceived)
+                    .toLocal()
+                    .toFormat("ccc, LLL  dd,  yyyy")
+                    .replace(/ {2}/g, "\u00a0")
+                : ""}
+            </TableCell>
             <TableCell align="right">
               <Typography fontFamily="monospace" variant="body2">
                 {row.InTransaction.void.toString()}
@@ -326,17 +320,14 @@ export default function Index() {
             ></TableCell>
             <TableCell>{row.OutTransaction.customer}</TableCell>
             <TableCell>{row.OutTransaction.deliveryReceipt}</TableCell>
-            <TableCell
-              align="right"
-              dangerouslySetInnerHTML={{
-                __html:
-                  row.OutTransaction.dateOfDeliveryReceipt !== null
-                    ? DateTime.fromISO(row.OutTransaction.dateOfDeliveryReceipt)
-                        .toLocal()
-                        .toFormat("ccc, LLL'&nbsp;'dd,'&nbsp;'yyyy")
-                    : "",
-              }}
-            />
+            <TableCell align="right">
+              {row.OutTransaction.dateOfDeliveryReceipt !== null
+                ? DateTime.fromISO(row.OutTransaction.dateOfDeliveryReceipt)
+                    .toLocal()
+                    .toFormat("ccc, LLL  dd,  yyyy")
+                    .replace(/ {2}/g, "\u00a0")
+                : ""}
+            </TableCell>
             <TableCell
               sx={{
                 background: "rgba(0, 0, 0, 0.12)",
@@ -349,26 +340,18 @@ export default function Index() {
             </TableCell>
           </React.Fragment>
         )}
-        <TableCell
-          align="right"
-          dangerouslySetInnerHTML={{
-            __html: DateTime.fromISO(row.createdAt)
-              .toLocal()
-              .toFormat(
-                "ccc, LLL'&nbsp;'dd,'&nbsp;'yyyy, hh:mm:ss.SSS'&nbsp;'a"
-              ),
-          }}
-        />
-        <TableCell
-          align="right"
-          dangerouslySetInnerHTML={{
-            __html: DateTime.fromISO(row.updatedAt)
-              .toLocal()
-              .toFormat(
-                "ccc, LLL'&nbsp;'dd,'&nbsp;'yyyy, hh:mm:ss.SSS'&nbsp;'a"
-              ),
-          }}
-        />
+        <TableCell align="right">
+          {DateTime.fromISO(row.createdAt)
+            .toLocal()
+            .toFormat("ccc, LLL  dd,  yyyy, hh:mm:ss.SSS  a")
+            .replace(/ {2}/g, "\u00a0")}
+        </TableCell>
+        <TableCell align="right">
+          {DateTime.fromISO(row.updatedAt)
+            .toLocal()
+            .toFormat("ccc, LLL  dd,  yyyy, hh:mm:ss.SSS  a")
+            .replace(/ {2}/g, "\u00a0")}
+        </TableCell>
       </TableRow>
     ));
   }, [transactions]);

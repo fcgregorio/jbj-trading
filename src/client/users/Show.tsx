@@ -196,29 +196,20 @@ function History() {
                   {row.admin.toString()}
                 </Typography>
               </TableCell>
-              <TableCell
-                align="right"
-                dangerouslySetInnerHTML={{
-                  __html: DateTime.fromISO(row.updatedAt)
-                    .toLocal()
-                    .toFormat(
-                      "ccc, LLL'&nbsp;'dd,'&nbsp;'yyyy, hh:mm:ss.SSS'&nbsp;'a"
-                    ),
-                }}
-              />
-              <TableCell
-                align="right"
-                dangerouslySetInnerHTML={{
-                  __html:
-                    row.deletedAt !== null
-                      ? DateTime.fromISO(row.deletedAt)
-                          .toLocal()
-                          .toFormat(
-                            "ccc, LLL'&nbsp;'dd,'&nbsp;'yyyy, hh:mm:ss.SSS'&nbsp;'a"
-                          )
-                      : "",
-                }}
-              />
+              <TableCell align="right">
+                {DateTime.fromISO(row.updatedAt)
+                  .toLocal()
+                  .toFormat("ccc, LLL  dd,  yyyy, hh:mm:ss.SSS  a")
+                  .replace(/ {2}/g, "\u00a0")}
+              </TableCell>
+              <TableCell align="right">
+                {row.deletedAt !== null
+                  ? DateTime.fromISO(row.deletedAt)
+                      .toLocal()
+                      .toFormat("ccc, LLL  dd,  yyyy, hh:mm:ss.SSS  a")
+                      .replace(/ {2}/g, "\u00a0")
+                  : ""}
+              </TableCell>
             </TableRow>
           ))}
           {loading ||

@@ -229,53 +229,39 @@ export default function Index() {
         </TableCell>
         <TableCell>{row.supplier}</TableCell>
         <TableCell>{row.deliveryReceipt}</TableCell>
-        <TableCell
-          align="right"
-          dangerouslySetInnerHTML={{
-            __html:
-              row.dateOfDeliveryReceipt !== null
-                ? DateTime.fromISO(row.dateOfDeliveryReceipt)
-                    .toLocal()
-                    .toFormat("ccc, LLL'&nbsp;'dd,'&nbsp;'yyyy")
-                : "",
-          }}
-        />
-        <TableCell
-          align="right"
-          dangerouslySetInnerHTML={{
-            __html:
-              row.dateReceived !== null
-                ? DateTime.fromISO(row.dateReceived)
-                    .toLocal()
-                    .toFormat("ccc, LLL'&nbsp;'dd,'&nbsp;'yyyy")
-                : "",
-          }}
-        />
+        <TableCell align="right">
+          {row.dateOfDeliveryReceipt !== null
+            ? DateTime.fromISO(row.dateOfDeliveryReceipt)
+                .toLocal()
+                .toFormat("ccc, LLL  dd,  yyyy")
+                .replace(/ {2}/g, "\u00a0")
+            : ""}
+        </TableCell>
+        <TableCell align="right">
+          {row.dateReceived !== null
+            ? DateTime.fromISO(row.dateReceived)
+                .toLocal()
+                .toFormat("ccc, LLL  dd,  yyyy")
+                .replace(/ {2}/g, "\u00a0")
+            : ""}
+        </TableCell>
         <TableCell align="right">
           <Typography fontFamily="monospace" variant="body2">
             {row.void.toString()}
           </Typography>
         </TableCell>
-        <TableCell
-          align="right"
-          dangerouslySetInnerHTML={{
-            __html: DateTime.fromISO(row.createdAt)
-              .toLocal()
-              .toFormat(
-                "ccc, LLL'&nbsp;'dd,'&nbsp;'yyyy, hh:mm:ss.SSS'&nbsp;'a"
-              ),
-          }}
-        />
-        <TableCell
-          align="right"
-          dangerouslySetInnerHTML={{
-            __html: DateTime.fromISO(row.updatedAt)
-              .toLocal()
-              .toFormat(
-                "ccc, LLL'&nbsp;'dd,'&nbsp;'yyyy, hh:mm:ss.SSS'&nbsp;'a"
-              ),
-          }}
-        />
+        <TableCell align="right">
+          {DateTime.fromISO(row.createdAt)
+            .toLocal()
+            .toFormat("ccc, LLL  dd,  yyyy, hh:mm:ss.SSS  a")
+            .replace(/ {2}/g, "\u00a0")}
+        </TableCell>
+        <TableCell align="right">
+          {DateTime.fromISO(row.updatedAt)
+            .toLocal()
+            .toFormat("ccc, LLL  dd,  yyyy, hh:mm:ss.SSS  a")
+            .replace(/ {2}/g, "\u00a0")}
+        </TableCell>
       </TableRow>
     ));
   }, [inTransactions]);
