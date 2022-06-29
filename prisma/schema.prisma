@@ -1,0 +1,203 @@
+// This is your Prisma schema file,
+// learn more about it in the docs https//pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                    String                  @id
+  username              String                  @unique
+  firstName             String
+  lastName              String
+  password              String
+  admin                 Boolean                 @default(false)
+  createdAt             DateTime
+  updatedAt             DateTime
+  deletedAt             DateTime?
+  UserHistory           UserHistory[]
+  UnitHistory           UnitHistory[]
+  CategoryHistory       CategoryHistory[]
+  ItemHistory           ItemHistory[]
+  InTransactionHistory  InTransactionHistory[]
+  OutTransactionHistory OutTransactionHistory[]
+}
+
+model UserHistory {
+  historyId     Int       @id
+  historyUserId String
+  historyUser   User      @relation(fields: [historyUserId], references: [id])
+  id            String
+  username      String
+  firstName     String
+  lastName      String
+  password      String
+  admin         Boolean
+  createdAt     DateTime
+  updatedAt     DateTime
+  deletedAt     DateTime?
+}
+
+model Unit {
+  id        String    @id
+  name      String
+  createdAt DateTime
+  updatedAt DateTime
+  deletedAt DateTime?
+}
+
+model UnitHistory {
+  historyId     Int       @id
+  historyUserId String
+  historyUser   User      @relation(fields: [historyUserId], references: [id])
+  id            String
+  name          String
+  createdAt     DateTime
+  updatedAt     DateTime
+  deletedAt     DateTime?
+}
+
+model Category {
+  id        String    @id
+  name      String
+  createdAt DateTime
+  updatedAt DateTime
+  deletedAt DateTime?
+}
+
+model CategoryHistory {
+  historyId     Int       @id
+  historyUserId String
+  historyUser   User      @relation(fields: [historyUserId], references: [id])
+  id            String
+  name          String
+  createdAt     DateTime
+  updatedAt     DateTime
+  deletedAt     DateTime?
+}
+
+model Item {
+  id          String    @id
+  name        String
+  safetyStock Int
+  stock       Int
+  remarks     String
+  unit        String
+  category    String
+  createdAt   DateTime
+  updatedAt   DateTime
+  deletedAt   DateTime?
+}
+
+model ItemHistory {
+  historyId     Int       @id
+  historyUserId String
+  historyUser   User      @relation(fields: [historyUserId], references: [id])
+  id            String
+  name          String
+  safetyStock   Int
+  stock         Int
+  remarks       String
+  unit          String
+  category      String
+  createdAt     DateTime
+  updatedAt     DateTime
+  deletedAt     DateTime?
+}
+
+model Transaction {
+  id               String          @id
+  inTransactionId  String?
+  inTransaction    InTransaction?
+  outTransactionId String?
+  outTransaction   OutTransaction?
+  createdAt        DateTime
+  updatedAt        DateTime
+}
+
+model InTransaction {
+  id                    String      @id
+  transaction           Transaction @relation(fields: [id], references: [id])
+  supplier              String
+  deliveryReceipt       String?
+  dateOfDeliveryReceipt String?
+  dateReceived          String?
+  void                  Boolean
+  createdAt             DateTime
+  updatedAt             DateTime
+}
+
+model InTransactionHistory {
+  historyId             Int      @id
+  historyUserId         String
+  historyUser           User     @relation(fields: [historyUserId], references: [id])
+  id                    String
+  supplier              String
+  deliveryReceipt       String?
+  dateOfDeliveryReceipt String?
+  dateReceived          String?
+  void                  Boolean
+  createdAt             DateTime
+  updatedAt             DateTime
+}
+
+model OutTransaction {
+  id                    String      @id
+  transaction           Transaction @relation(fields: [id], references: [id])
+  customer              String
+  deliveryReceipt       String?
+  dateOfDeliveryReceipt String?
+  void                  Boolean
+  createdAt             DateTime
+  updatedAt             DateTime
+}
+
+model OutTransactionHistory {
+  historyId             Int      @id
+  historyUserId         String
+  historyUser           User     @relation(fields: [historyUserId], references: [id])
+  id                    String
+  customer              String
+  deliveryReceipt       String?
+  dateOfDeliveryReceipt String?
+  void                  Boolean
+  createdAt             DateTime
+  updatedAt             DateTime
+}
+
+model Transfer {
+  id            String       @id
+  inTransferId  String?
+  inTransfer    InTransfer?
+  outTransferId String?
+  outTransfer   OutTransfer?
+  createdAt     DateTime
+  updatedAt     DateTime
+}
+
+model InTransfer {
+  id          String   @id
+  transfer    Transfer @relation(fields: [id], references: [id])
+  index       Int
+  item        String
+  transaction String
+  quantity    Int
+  createdAt   DateTime
+  updatedAt   DateTime
+}
+
+model OutTransfer {
+  id          String   @id
+  transfer    Transfer @relation(fields: [id], references: [id])
+  index       Int
+  item        String
+  transaction String
+  quantity    Int
+  createdAt   DateTime
+  updatedAt   DateTime
+}
